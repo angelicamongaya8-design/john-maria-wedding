@@ -142,22 +142,59 @@
 
   /* ── opening the envelope ──────────────────────────────── */
 
-  // Card finishes rising at ~1.5s, is held still so it can be read, and the
-  // overture fades from 3.4s. Mirrors the transition delays in style.css.
-  var HOLD = 4400;
-  var HOLD_CALM = 1800;   // no motion, but still time enough to read the card
+  // Card finishes rising at ~1.5s and is held still so it can be read.
+  // Then it expands until it IS the page — the envelope is what the
+  // invitation comes out of, so the card has to carry the handover rather
+  // than the two cross-fading past each other.
+  var HOLD = 3400;        // card readable until here
+  var ZOOM = 1250;        // card grows to fill the screen
+  var HOLD_CALM = 1600;   // no motion: just time enough to read it
+
+  var card     = document.querySelector('.env-card');
+  var envelope = document.querySelector('.envelope');
 
   var opened = false;
   var handoff = null;
 
-  function enterSuite(){
-    if (!overture.isConnected) return;
+  function zoomCard(){
+    if (!overture.isConnected || calm) return enterSuite();
     window.clearTimeout(handoff);
-    overture.remove();
+
+    // Work from the card's UNTRANSFORMED box: the transform we are about to
+    // set replaces the rise, so measuring the risen position would double it.
+    var env = envelope.getBoundingClientRect();
+    var w = card.offsetWidth;
+    var h = card.offsetHeight;
+    var left = env.left + card.offsetLeft;
+    var top  = env.top  + card.offsetTop;
+
+    var vw = window.innerWidth;
+    var vh = window.innerHeight;
+    var scale = Math.max(vw / w, vh / h) * 1.06;
+
+    card.style.setProperty('--zx', (vw / 2 - (left + w / 2)).toFixed(1) + 'px');
+    card.style.setProperty('--zy', (vh / 2 - (top + h / 2)).toFixed(1) + 'px');
+    card.style.setProperty('--zs', scale.toFixed(3));
+
+    overture.classList.add('is-zooming');
+
+    // hand over only once the card genuinely covers the viewport — any
+    // earlier and the page shows around its edges
+    handoff = window.setTimeout(enterSuite, ZOOM * 0.86);
+  }
+
+  function enterSuite(){
+    if (suite.classList.contains('is-lit')) return;
+    window.clearTimeout(handoff);
+
     suite.removeAttribute('aria-hidden');
     suite.classList.add('is-lit');
     reveal();
     if (!score.paused) fadeUp();   // the music arrives with the invitation
+
+    window.setTimeout(function(){
+      if (overture.isConnected) overture.remove();
+    }, calm ? 0 : 480);
   }
 
   function unseal(){
@@ -167,7 +204,7 @@
     overture.classList.add('is-open');
     startScore();
 
-    handoff = window.setTimeout(enterSuite, calm ? HOLD_CALM : HOLD);
+    handoff = window.setTimeout(zoomCard, calm ? HOLD_CALM : HOLD);
 
     // let an impatient second tap skip the rest of the sequence
     window.setTimeout(function(){
