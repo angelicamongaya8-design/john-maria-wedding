@@ -58,6 +58,29 @@
 
   var RSVP_ENDPOINT = 'https://script.google.com/macros/s/AKfycbwX7itsDawc_Cr2QFfYpwr4Q4VMH3MoiU3BDVISYa8P35Sl_t4vzWMe3ndbmg5jAn4N/exec';
 
+  var woken = false;
+
+  function wakeScript(){
+    if (woken || !RSVP_ENDPOINT) return;
+    woken = true;
+    fetch(RSVP_ENDPOINT + '?name=').catch(function(){});
+  }
+
+  function wakeWhenSeen(el){
+    if (!el) return;
+    if (!('IntersectionObserver' in window)) return;
+
+    var watcher = new IntersectionObserver(function(entries){
+      entries.forEach(function(entry){
+        if (!entry.isIntersecting) return;
+        wakeScript();
+        watcher.disconnect();
+      });
+    }, { rootMargin: '0px 0px -20% 0px' });
+
+    watcher.observe(el);
+  }
+
   (function rsvp(){
     var find   = document.getElementById('rsvp-find');
     var input  = document.getElementById('rsvp-name');
@@ -119,26 +142,8 @@
     look.setAttribute('data-idle', look.textContent);
     send.setAttribute('data-idle', send.textContent);
 
-    var warmed = false;
-
-    function warm(){
-      if (warmed) return;
-      warmed = true;
-      fetch(RSVP_ENDPOINT + '?name=').catch(function(){});
-    }
-
-    input.addEventListener('focus', warm);
-
-    if ('IntersectionObserver' in window){
-      var watcher = new IntersectionObserver(function(entries){
-        entries.forEach(function(entry){
-          if (!entry.isIntersecting) return;
-          warm();
-          watcher.disconnect();
-        });
-      }, { rootMargin: '0px 0px -25% 0px' });
-      watcher.observe(find);
-    }
+    input.addEventListener('focus', wakeScript);
+    wakeWhenSeen(find);
 
     find.addEventListener('submit', function(ev){
       ev.preventDefault();
@@ -352,9 +357,13 @@
     if (!box || !RSVP_ENDPOINT) return;
     box.hidden = false;
 
+    nameEl.addEventListener('focus', wakeScript);
+    wakeWhenSeen(box);
+
     var CHUNK = 4 * 1024 * 1024;
     var CHUNK_TRIES = 3;
     var FALLBACK_MAX = 18 * 1024 * 1024;
+    var INIT_WAIT = 12000;
     var picked = [];
     var sending = false;
     var stopped = false;
@@ -627,7 +636,7 @@
       });
     }
 
-    function putDirect(entry, i){
+    function openSession(entry, tries){
       return ask({
         action: 'upload-init',
         from: nameEl.value.trim(),
@@ -636,7 +645,16 @@
         size: entry.file.size,
 
         origin: window.location.origin
-      })
+      }, tries ? 30000 : INIT_WAIT)
+      .catch(function(err){
+        if (tries || String(err && err.message) !== 'timeout') throw err;
+
+        return openSession(entry, 1);
+      });
+    }
+
+    function putDirect(entry, i){
+      return openSession(entry, 0)
       .then(function(res){
         if (!res || !res.ok || !res.session){
           throw new Error('init: ' + ((res && res.error) || 'no session'));
@@ -745,10 +763,14 @@
 
       var route = directWorks
         ? putDirect(entry, i).catch(function(err){
-            directWorks = false;
-            directKnown = true;
+            var why = String((err && err.message) || '');
 
-            return putThroughScript(entry, i, err && err.message);
+            if (why !== 'timeout'){
+              directWorks = false;
+              directKnown = true;
+            }
+
+            return putThroughScript(entry, i, why);
           })
         : putThroughScript(entry, i, 'direct route already refused this visit');
 
