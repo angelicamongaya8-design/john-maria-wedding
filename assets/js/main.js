@@ -160,6 +160,7 @@
 
   var card     = document.querySelector('.env-card');
   var envelope = document.querySelector('.envelope');
+  var leaf     = document.querySelector('.leaf');
 
   var opened = false;
   var handoff = null;
@@ -208,13 +209,19 @@
       'box-shadow .5s ease'
     ].join(', ');
 
+    // Land on the sheet the invitation is actually printed on, not the whole
+    // window. On a wide screen the page is a column of paper on a deeper
+    // ground, so a card that grew edge to edge arrived as the wrong object.
+    // The leaf fills the width on a phone, so this is right at both ends.
+    var sheet = leaf ? leaf.getBoundingClientRect() : null;
+
     card.style.background  = 'var(--paper)';
     card.style.borderColor = 'transparent';
-    card.style.boxShadow   = 'none';
-    card.style.left   = '0px';
+    card.style.boxShadow   = '0 0 70px -34px rgba(17,17,16,.30)';   // matches .leaf
+    card.style.left   = (sheet ? sheet.left  : 0) + 'px';
     card.style.top    = '0px';
-    card.style.width  = '100%';   // fixed position: 100% of the viewport
-    card.style.height = '100%';
+    card.style.width  = (sheet ? sheet.width : window.innerWidth) + 'px';
+    card.style.height = window.innerHeight + 'px';
 
     handoff = window.setTimeout(enterSuite, ZOOM * 0.92);
   }
