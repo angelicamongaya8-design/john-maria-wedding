@@ -28,7 +28,7 @@
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;1,300;1,400&family=Jost:wght@200;300;400&display=swap">
 
 <link rel="stylesheet" href="assets/css/reset.css?v=0418e889">
-<link rel="stylesheet" href="assets/css/style.css?v=e5fcc0d1">
+<link rel="stylesheet" href="assets/css/style.css?v=077ae8c8">
 </head>
 <body>
 
@@ -348,13 +348,50 @@
   </svg>
 
   <!-- ── rsvp ── -->
-  <section class="js-reveal">
+  <section class="js-reveal" id="rsvp">
     <p class="label">RSVP</p>
     <p class="lede">
       We have reserved seat/s for you. The favour of your reply is requested
       on or before <span class="rsvp-by">the end of November</span>.
     </p>
-    <a class="rsvp-cta" id="rsvp-link" href="#rsvp-pending" hidden>Send your reply</a>
+
+    <!-- shown only once a guest list is connected -->
+    <form class="rsvp-find" id="rsvp-find" hidden>
+      <label class="field-label" for="rsvp-name">Guest name</label>
+      <input class="field" id="rsvp-name" name="name" type="text"
+             autocomplete="name" autocapitalize="words" spellcheck="false"
+             placeholder="Enter your name as written on the invitation">
+      <button class="rsvp-cta" type="submit" id="rsvp-look">Find my invitation</button>
+    </form>
+
+    <p class="field-note" id="rsvp-msg" role="status" aria-live="polite" hidden></p>
+
+    <div class="rsvp-party" id="rsvp-party" hidden>
+      <div class="seats">
+        <p class="label">Reserved in your honour</p>
+        <p class="seats-n" id="rsvp-seats">—</p>
+        <p class="field-note" id="rsvp-seats-l">seats</p>
+      </div>
+
+      <svg class="rule-pearl" viewBox="0 0 240 14" aria-hidden="true">
+        <line x1="0" y1="7" x2="96" y2="7" stroke="#E6E4DE" stroke-width="1"/>
+        <line x1="144" y1="7" x2="240" y2="7" stroke="#E6E4DE" stroke-width="1"/>
+        <circle cx="104" cy="7" r="3.4" fill="url(#pearl)" stroke="#D6D4CC" stroke-width=".6"/>
+        <circle cx="120" cy="7" r="5.6" fill="url(#pearl)" stroke="#D6D4CC" stroke-width=".6"/>
+        <circle cx="136" cy="7" r="3.4" fill="url(#pearl)" stroke="#D6D4CC" stroke-width=".6"/>
+      </svg>
+
+      <p class="label">Confirm attendance</p>
+      <ul class="guests" id="rsvp-guests"></ul>
+
+      <button class="rsvp-cta" type="button" id="rsvp-send">Confirm response</button>
+      <p class="field-note">
+        Kindly reply for each guest. Only confirmed guests can be
+        accommodated, and we are unable to receive plus&#8209;ones.
+      </p>
+    </div>
+
+    <!-- fallback while no guest list is connected -->
     <p class="label" id="rsvp-alt" style="letter-spacing:.2em;max-width:22rem">
       Please reply to the invitation you received, or scan the QR code on it
     </p>
@@ -395,6 +432,6 @@
   </svg>
 </button>
 
-<script src="assets/js/main.js?v=9a23bcd5" defer></script>
+<script src="assets/js/main.js?v=ad1705fe" defer></script>
 </body>
 </html>

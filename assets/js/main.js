@@ -61,18 +61,169 @@
     var timer = setInterval(tick, 1000);
   })();
 
-  /* ── rsvp: show the button only once a real link is set ── */
+  /* ─────────────────────────────────────────────────────────
+     RSVP
+
+     Paste the Google Apps Script web app URL below — the one ending
+     in /exec — and the form appears. Leave it empty and the section
+     falls back to "reply to the invitation", with nothing broken on
+     screen. The guest list itself never lives in this page: it stays
+     in the couple's private Sheet, so a public repo cannot leak who
+     was invited or how many seats they were given.
+     ───────────────────────────────────────────────────────── */
+  var RSVP_ENDPOINT = 'https://script.google.com/macros/s/AKfycbwlQBPyX8trdCC81Dh9jSd6EGbNR2GF01Y-fVlDCbKOrogHUe4VaJHzKKylUycxhKsFVQ/exec';
+
   (function rsvp(){
-    var a = document.getElementById('rsvp-link');
-    if (!a) return;
-    var href = a.getAttribute('href') || '';
-    if (href && href.indexOf('#') !== 0){
-      a.hidden = false;
-      a.target = '_blank';
-      a.rel = 'noopener';
-      var alt = document.getElementById('rsvp-alt');
-      if (alt) alt.textContent = 'Or simply reply to the invitation you received';
+    var find   = document.getElementById('rsvp-find');
+    var input  = document.getElementById('rsvp-name');
+    var look   = document.getElementById('rsvp-look');
+    var msg    = document.getElementById('rsvp-msg');
+    var party  = document.getElementById('rsvp-party');
+    var seats  = document.getElementById('rsvp-seats');
+    var seatsL = document.getElementById('rsvp-seats-l');
+    var list   = document.getElementById('rsvp-guests');
+    var send   = document.getElementById('rsvp-send');
+    var alt    = document.getElementById('rsvp-alt');
+
+    if (!find || !RSVP_ENDPOINT) return;   // not connected yet
+
+    find.hidden = false;
+    if (alt) alt.textContent = 'Or simply reply to the invitation you received';
+
+    var current = null;
+
+    function say(text, tone){
+      if (!text){ msg.hidden = true; return; }
+      msg.textContent = text;
+      msg.setAttribute('data-tone', tone || 'soft');
+      msg.hidden = false;
     }
+
+    function busy(el, on, label){
+      el.disabled = on;
+      el.textContent = on ? label : el.getAttribute('data-idle');
+    }
+
+    look.setAttribute('data-idle', look.textContent);
+    send.setAttribute('data-idle', send.textContent);
+
+    /* ── find the invitation ── */
+    find.addEventListener('submit', function(ev){
+      ev.preventDefault();
+      var name = input.value.trim();
+      if (!name){ say('Please enter your name first.'); input.focus(); return; }
+
+      party.hidden = true;
+      say('');
+      busy(look, true, 'Looking…');
+
+      fetch(RSVP_ENDPOINT + '?name=' + encodeURIComponent(name))
+        .then(function(r){ return r.json(); })
+        .then(function(data){
+          busy(look, false);
+          if (!data || !data.found){
+            say('We could not find that name. Please enter it exactly as it appears on your invitation, or reply to the invitation directly.', 'bad');
+            return;
+          }
+          current = data;
+          render(data);
+        })
+        .catch(function(){
+          busy(look, false);
+          say('Something went wrong reaching our guest list. Please try again, or reply to the invitation directly.', 'bad');
+        });
+    });
+
+    /* ── show the party ── */
+    function render(data){
+      var members = data.members || [];
+      seats.textContent = members.length;
+      seatsL.textContent = members.length === 1 ? 'seat' : 'seats';
+
+      list.textContent = '';
+      members.forEach(function(person, i){
+        var li = document.createElement('li');
+        var wrap = document.createElement('div');
+        wrap.className = 'guest';
+
+        var n = document.createElement('p');
+        n.className = 'guest-n';
+        n.textContent = person;
+        wrap.appendChild(n);
+
+        var reply = document.createElement('div');
+        reply.className = 'reply';
+        reply.setAttribute('role', 'radiogroup');
+        reply.setAttribute('aria-label', 'Reply for ' + person);
+
+        [['yes', 'Joyfully accepts'], ['no', 'Regretfully declines']].forEach(function(opt){
+          var id = 'g' + i + '-' + opt[0];
+          var r = document.createElement('input');
+          r.type = 'radio'; r.name = 'guest-' + i; r.id = id; r.value = opt[0];
+          var l = document.createElement('label');
+          l.setAttribute('for', id);
+          l.textContent = opt[1];
+          reply.appendChild(r);
+          reply.appendChild(l);
+        });
+
+        // answering clears a "you still owe a reply for X" nudge
+        reply.addEventListener('change', function(){ say(''); });
+
+        wrap.appendChild(reply);
+        li.appendChild(wrap);
+        list.appendChild(li);
+      });
+
+      party.hidden = false;
+      say('');
+      party.scrollIntoView({ behavior: calm ? 'auto' : 'smooth', block: 'center' });
+    }
+
+    /* ── send it ── */
+    send.addEventListener('click', function(){
+      if (!current) return;
+
+      var members = current.members || [];
+      var replies = [];
+      for (var i = 0; i < members.length; i++){
+        var picked = list.querySelector('input[name="guest-' + i + '"]:checked');
+        if (!picked){
+          say('Kindly reply for ' + members[i] + ' before confirming.', 'bad');
+          var row = list.children[i];
+          if (row) row.scrollIntoView({ behavior: calm ? 'auto' : 'smooth', block: 'center' });
+          return;
+        }
+        replies.push({ name: members[i], attending: picked.value === 'yes' });
+      }
+
+      busy(send, true, 'Sending…');
+      say('');
+
+      // text/plain keeps this a simple request — Apps Script cannot answer
+      // the CORS preflight that application/json would trigger
+      fetch(RSVP_ENDPOINT, {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        body: JSON.stringify({
+          party: current.party || '',
+          lookup: input.value.trim(),
+          replies: replies
+        })
+      })
+        .then(function(r){ return r.json(); })
+        .then(function(res){
+          if (!res || !res.ok) throw new Error('rejected');
+          find.hidden = true;
+          party.hidden = true;
+          say('Thank you — your reply is in. We cannot wait to celebrate with you.');
+          msg.scrollIntoView({ behavior: calm ? 'auto' : 'smooth', block: 'center' });
+        })
+        .catch(function(){
+          busy(send, false);
+          say('We could not record that just now. Please try again in a moment.', 'bad');
+        });
+    });
   })();
 
   /* ── music ─────────────────────────────────────────────── */
