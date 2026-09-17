@@ -485,8 +485,9 @@ function authorise() {
 
   try {
     var probe = uploadInit({
-      from: 'Permission check',
-      name: 'delete-me.txt',
+      probe: true,
+      from: '',
+      name: 'permission check',
       type: 'text/plain',
       size: 1,
       origin: 'https://gelaimongaya-design.github.io'
