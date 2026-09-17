@@ -98,9 +98,10 @@ a{ color:inherit; }
 
 .overture-eyebrow{
   display:grid; gap:.75rem; justify-items:center;
-  transition: opacity .5s ease, transform .5s ease;
+  /* clears out early — the card rises into this space */
+  transition: opacity .45s ease, transform .45s ease;
 }
-#overture.is-open .overture-eyebrow{ opacity:0; transform: translateY(-8px); }
+#overture.is-open .overture-eyebrow{ opacity:0; transform: translateY(-10px); }
 
 /* drifting specks */
 .motes{ position:absolute; inset:0; overflow:hidden; pointer-events:none; }
@@ -141,10 +142,12 @@ a{ color:inherit; }
   box-shadow: 0 18px 44px -28px rgba(17,17,16,.34);
 }
 
-/* card that rises out */
+/* The card sits BEHIND the front panel and never changes z-index — that
+   occlusion is the whole illusion. It is revealed by clearing the
+   envelope's top edge, not by being brought forward. */
 .env-card{
-  position:absolute; left:6.5%; right:6.5%; top:7%;
-  height:84%;
+  position:absolute; left:8%; right:8%; top:6%;
+  height:82%;
   z-index:2;
   background: var(--paper-edge);
   border:1px solid var(--hair-soft);
@@ -156,8 +159,9 @@ a{ color:inherit; }
   box-shadow: 0 10px 26px -20px rgba(17,17,16,.4);
 }
 #overture.is-open .env-card{
-  transform: translateY(-58%);
-  z-index:5;
+  /* far enough that the whole message clears the envelope, with the
+     bottom edge still tucked inside the pocket */
+  transform: translateY(-92%);
   box-shadow: 0 22px 40px -26px rgba(17,17,16,.45);
 }
 
@@ -183,7 +187,9 @@ a{ color:inherit; }
   z-index:3;
   background: linear-gradient(180deg, #F6F5F1 0%, var(--paper) 46%);
   border:1px solid var(--hair);
-  clip-path: polygon(0 0, 50% 47%, 100% 0, 100% 100%, 0 100%);
+  /* shallow notch: the pocket hides almost all of the card at rest, so
+     there is something to emerge from */
+  clip-path: polygon(0 0, 50% 24%, 100% 0, 100% 100%, 0 100%);
 }
 
 /* creases drawn on top, so the folds read as paper */
