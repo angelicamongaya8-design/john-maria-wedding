@@ -71,7 +71,7 @@
      in the couple's private Sheet, so a public repo cannot leak who
      was invited or how many seats they were given.
      ───────────────────────────────────────────────────────── */
-  var RSVP_ENDPOINT = 'https://script.google.com/macros/s/AKfycbwlQBPyX8trdCC81Dh9jSd6EGbNR2GF01Y-fVlDCbKOrogHUe4VaJHzKKylUycxhKsFVQ/exec';
+  var RSVP_ENDPOINT = 'https://script.google.com/macros/s/AKfycbwX7itsDawc_Cr2QFfYpwr4Q4VMH3MoiU3BDVISYa8P35Sl_t4vzWMe3ndbmg5jAn4N/exec';
 
   (function rsvp(){
     var find   = document.getElementById('rsvp-find');
