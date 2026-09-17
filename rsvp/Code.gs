@@ -1,16 +1,11 @@
-
-
 var GUEST_SHEET    = 'Guests';
 var RESPONSE_SHEET = 'Responses';
 var UPLOAD_SHEET   = 'Uploads';
 
-
 var UPLOAD_FOLDER  = '';
 var UPLOAD_FOLDER_NAME = 'John + Maria · Guest photos and videos';
 
-
 var BIG_FILES_KEY = 'bigfiles';
-
 
 var LONG_VIDEO_KEY  = 'longvideo';
 var DEFAULT_LONG_MB = 100;
@@ -19,22 +14,17 @@ var PHOTO_FOLDER = 'Photos';
 var VIDEO_FOLDER = 'Videos';
 var LONG_FOLDER  = 'Long videos';
 
-
 var FALLBACK_MAX = 18 * 1024 * 1024;
-
 
 var NOTIFY_EMAIL   = '';
 var SETTINGS_SHEET = 'Settings';
 
-
-
-
 function norm(value) {
   return String(value == null ? '' : value)
     .normalize('NFD')
-    .replace(/[̀-ͯ]/g, '')   // strip accents
+    .replace(/[̀-ͯ]/g, '')
     .toLowerCase()
-    .replace(/[^a-z0-9 ]+/g, ' ')      // punctuation, hyphens, periods
+    .replace(/[^a-z0-9 ]+/g, ' ')
     .replace(/\s+/g, ' ')
     .trim();
 }
@@ -52,7 +42,7 @@ function guestRows() {
   var values = sheet.getDataRange().getValues();
   var rows = [];
 
-  for (var i = 1; i < values.length; i++) {          // row 1 is the header
+  for (var i = 1; i < values.length; i++) {
     var party = String(values[i][0] || '').trim();
     var name  = String(values[i][1] || '').trim();
     if (!party || !name) continue;
@@ -61,8 +51,6 @@ function guestRows() {
   return rows;
 }
 
-
-
 function repliedMap() {
   var sheet = SpreadsheetApp.getActive().getSheetByName(RESPONSE_SHEET);
   var map = {};
@@ -70,21 +58,16 @@ function repliedMap() {
 
   var values = sheet.getDataRange().getValues();
   for (var i = 1; i < values.length; i++) {
-    var name  = String(values[i][2] || '').trim();      // C: Guest
-    var reply = String(values[i][3] || '').trim();      // D: Reply
+    var name  = String(values[i][2] || '').trim();
+    var reply = String(values[i][3] || '').trim();
     if (!name) continue;
     map[norm(name)] = /joyfully/i.test(reply);
   }
   return map;
 }
 
-
-
 function doGet(e) {
   try {
-    // Where to send a guest whose video is larger than the page can carry.
-    // Asked for only when that actually happens, so an ordinary visit costs
-    // this script nothing.
     if (e && e.parameter && e.parameter.folder) {
       return json({ ok: true, folder: settingValue(BIG_FILES_KEY) });
     }
@@ -94,14 +77,11 @@ function doGet(e) {
 
     var rows = guestRows();
 
-    // exact match first
     var hit = null;
     for (var i = 0; i < rows.length; i++) {
       if (rows[i].key === typed) { hit = rows[i]; break; }
     }
 
-    // then: every word typed appears in the name, but only when that
-    // narrows to exactly one person — never guess between two guests
     if (!hit) {
       var words = typed.split(' ');
       var near = rows.filter(function (row) {
@@ -118,7 +98,6 @@ function doGet(e) {
       .filter(function (row) { return row.party === hit.party; })
       .map(function (row) { return row.name; });
 
-    // What the page needs to show a reply back instead of asking for it again.
     var already = repliedMap();
     var replied = {};
     members.forEach(function (name) {
@@ -127,13 +106,10 @@ function doGet(e) {
     });
 
     return json({ found: true, party: hit.party, members: members, replied: replied });
-
   } catch (err) {
     return json({ found: false, error: String(err) });
   }
 }
-
-
 
 function doPost(e) {
   var body;
@@ -142,7 +118,6 @@ function doPost(e) {
   } catch (err) {
     return json({ ok: false, error: 'bad request' });
   }
-
 
   switch (body.action) {
     case 'upload-init': return uploadInit(body);
@@ -156,12 +131,11 @@ function recordReplies(body) {
   var lock = LockService.getScriptLock();
 
   try {
-    lock.waitLock(20000);   
+    lock.waitLock(20000);
 
     var replies = body.replies || [];
     if (!replies.length) return json({ ok: false, error: 'no replies' });
 
-   
     var already = repliedMap();
     var fresh = replies.filter(function (r) {
       return !already.hasOwnProperty(norm(r.name || ''));
@@ -199,18 +173,12 @@ function recordReplies(body) {
     notify(body.party, replies);
 
     return json({ ok: true, recorded: rows.length });
-
   } catch (err) {
     return json({ ok: false, error: String(err) });
-
   } finally {
     try { lock.releaseLock(); } catch (ignored) {}
   }
 }
-
-
-
-
 
 function notifyAddress() {
   try {
@@ -259,13 +227,9 @@ function notify(party, replies) {
       subject: 'RSVP — ' + (party || 'a guest') + ' (' + yes.length + '/' + replies.length + ')',
       body: lines.join('\n')
     });
-
   } catch (ignored) {
   }
 }
-
-
-
 
 function settingValue(key) {
   try {
@@ -282,11 +246,9 @@ function settingValue(key) {
   return '';
 }
 
-
 function folderFromSetting(key) {
   var configured = settingValue(key);
   if (!configured) return null;
-
 
   var match = configured.match(/[-\w]{25,}/);
   if (!match) return null;
@@ -308,12 +270,10 @@ function uploadFolder() {
   return DriveApp.createFolder(UPLOAD_FOLDER_NAME);
 }
 
-
 function childFolder(parent, name) {
   var found = parent.getFoldersByName(name);
   return found.hasNext() ? found.next() : parent.createFolder(name);
 }
-
 
 function destinationFor(type, size) {
   var root = uploadFolder();
@@ -323,13 +283,11 @@ function destinationFor(type, size) {
   }
 
   if (size > longVideoBytes()) {
-    
     return folderFromSetting(BIG_FILES_KEY) || childFolder(root, LONG_FOLDER);
   }
 
   return childFolder(root, VIDEO_FOLDER);
 }
-
 
 function uploadName(from, name) {
   var clean = String(name || 'photo')
@@ -342,16 +300,14 @@ function uploadName(from, name) {
   return who ? who + ' · ' + clean : clean;
 }
 
-
 function freeSpace() {
   try {
     var left = DriveApp.getStorageLimit() - DriveApp.getStorageUsed();
     return left > 0 ? left : 0;
   } catch (err) {
-    return -1;                      
+    return -1;
   }
 }
-
 
 function longVideoBytes() {
   var raw = String(settingValue(LONG_VIDEO_KEY) || '').trim();
@@ -371,7 +327,6 @@ function uploadInit(body) {
     var type = String(body.type || 'application/octet-stream');
     var name = uploadName(body.from, body.name);
 
-  
     var where = body.probe ? uploadFolder() : destinationFor(type, size);
 
     var headers = {
@@ -380,7 +335,6 @@ function uploadInit(body) {
       'X-Upload-Content-Length': String(size)
     };
 
-    
     var origin = String(body.origin || '');
     if (/^https:\/\/[A-Za-z0-9.-]+(:\d+)?$/.test(origin)) headers.Origin = origin;
 
@@ -402,7 +356,6 @@ function uploadInit(body) {
       });
     }
 
-    
     var sent = response.getAllHeaders();
     var session = sent.Location || sent.location || '';
     if (!session) return json({ ok: false, error: 'no session url' });
@@ -411,7 +364,6 @@ function uploadInit(body) {
       ok: true, session: session, name: name,
       folder: where.getName(), free: freeSpace()
     });
-
   } catch (err) {
     return json({ ok: false, error: String(err) });
   }
@@ -434,7 +386,6 @@ function uploadBlob(body) {
     logUpload(body.from, name, bytes.length, 'fallback', body.why,
       file.getParents().hasNext() ? file.getParents().next().getName() : '');
     return json({ ok: true, id: file.getId(), name: name });
-
   } catch (err) {
     return json({ ok: false, error: String(err) });
   }
@@ -449,7 +400,6 @@ function uploadDone(body) {
     return json({ ok: false, error: String(err) });
   }
 }
-
 
 function logUpload(from, name, size, route, note, folder) {
   try {
@@ -474,8 +424,6 @@ function logUpload(from, name, size, route, note, folder) {
   } catch (ignored) {}
 }
 
-
-
 function authorise() {
   var report = [];
 
@@ -489,7 +437,6 @@ function authorise() {
   }
 
   try {
-    
     var rows = guestRows();
     var parties = {};
     rows.forEach(function (row) { parties[row.party] = true; });
@@ -520,7 +467,6 @@ function authorise() {
         ? 'unknown'
         : (Math.round((left / 1073741824) * 100) / 100) + ' GB in this Drive'));
 
-     
       try {
         UrlFetchApp.fetch(answer.session, { method: 'delete', muteHttpExceptions: true });
       } catch (ignored) {}

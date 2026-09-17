@@ -7,9 +7,8 @@
   var toggle   = document.getElementById('music-toggle');
   var calm     = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
-  
   try { history.scrollRestoration = 'manual'; } catch (e) {}
-  document.documentElement.classList.add('is-sealed');  
+  document.documentElement.classList.add('is-sealed');
   window.scrollTo(0, 0);
 
   (function motes(){
@@ -57,7 +56,6 @@
     var timer = setInterval(tick, 1000);
   })();
 
-  
   var RSVP_ENDPOINT = 'https://script.google.com/macros/s/AKfycbwX7itsDawc_Cr2QFfYpwr4Q4VMH3MoiU3BDVISYa8P35Sl_t4vzWMe3ndbmg5jAn4N/exec';
 
   (function rsvp(){
@@ -74,14 +72,13 @@
     var again  = document.getElementById('rsvp-again');
     var alt    = document.getElementById('rsvp-alt');
 
-    if (!find || !RSVP_ENDPOINT) return;  
+    if (!find || !RSVP_ENDPOINT) return;
 
     find.hidden = false;
     if (alt) alt.textContent = 'If your name does not come up, kindly let us know';
 
-    var current = null;   
+    var current = null;
 
-    
     function norm(value){
       return String(value == null ? '' : value)
         .normalize('NFD').replace(/[̀-ͯ]/g, '')
@@ -122,7 +119,6 @@
     look.setAttribute('data-idle', look.textContent);
     send.setAttribute('data-idle', send.textContent);
 
- 
     find.addEventListener('submit', function(ev){
       ev.preventDefault();
       var name = input.value.trim();
@@ -149,7 +145,6 @@
         });
     });
 
-   
     function render(data){
       var members = data.members || [];
       var replied = data.replied || {};
@@ -170,7 +165,7 @@
 
       others.hidden = members.length < 2 || !waiting.length;
       party.hidden = false;
-      again.hidden = waiting.length > 0;   
+      again.hidden = waiting.length > 0;
       send.hidden = !waiting.length;
       busy(send, false);
 
@@ -219,7 +214,6 @@
       return li;
     }
 
-    
     function markDone(i, person, attending){
       var wrap = list.querySelector('[data-guest="' + i + '"]');
       if (!wrap) return;
@@ -256,7 +250,7 @@
       var replies = [];
 
       members.forEach(function(person, i){
-        if (current.done[person]) return;                   
+        if (current.done[person]) return;
         var picked = list.querySelector('input[name="guest-' + i + '"]:checked');
         if (picked) replies.push({ index: i, name: person, attending: picked.value === 'yes' });
       });
@@ -269,7 +263,6 @@
       busy(send, true, 'Sending');
       say('');
 
-      
       fetch(RSVP_ENDPOINT, {
         method: 'POST',
         headers: { 'Content-Type': 'text/plain;charset=utf-8' },
@@ -281,7 +274,6 @@
       })
         .then(function(r){ return r.json(); })
         .then(function(res){
-     
           if (res && res.already){
             busy(send, false);
             say('That has already been answered. Search again to see what is recorded.', 'bad');
@@ -317,7 +309,6 @@
     });
   })();
 
- 
   (function share(){
     var box    = document.getElementById('share');
     var nameEl = document.getElementById('share-name');
@@ -328,22 +319,20 @@
     var send   = document.getElementById('share-send');
     var again  = document.getElementById('share-again');
 
-    if (!box || !RSVP_ENDPOINT) return;   
+    if (!box || !RSVP_ENDPOINT) return;
     box.hidden = false;
 
-    var CHUNK = 4 * 1024 * 1024;         
-    var CHUNK_TRIES = 3;                  
-    var FALLBACK_MAX = 18 * 1024 * 1024; 
+    var CHUNK = 4 * 1024 * 1024;
+    var CHUNK_TRIES = 3;
+    var FALLBACK_MAX = 18 * 1024 * 1024;
     var picked = [];
     var sending = false;
-    var stopped = false;      
-    var inFlight = null;       
+    var stopped = false;
+    var inFlight = null;
 
-    
     var directWorks = true;
-    var directKnown = false;   
-    var roomLeft = -1;         
-
+    var directKnown = false;
+    var roomLeft = -1;
 
     function checkRoute(){
       if (directKnown) return Promise.resolve(directWorks);
@@ -358,7 +347,7 @@
         origin: window.location.origin
       }, 12000)
       .then(function(res){
-        directWorks = !!(res && res.ok && res.session);   
+        directWorks = !!(res && res.ok && res.session);
         directKnown = true;
         if (res && typeof res.free === 'number') roomLeft = res.free;
         return directWorks;
@@ -370,7 +359,6 @@
       });
     }
 
-  
     var bigFiles = null;
 
     function dropOff(){
@@ -385,7 +373,6 @@
         .catch(function(){ bigFiles = ''; return ''; });
     }
 
-  
     function sayWithDropOff(before, linkText, plainText, after, tone){
       dropOff().then(function(url){
         if (!url){
@@ -448,8 +435,8 @@
       drop.textContent = '×';
       drop.setAttribute('aria-label', 'Remove ' + entry.file.name);
       drop.addEventListener('click', function(){
-        if (entry.sending) return;              
-        var at = picked.indexOf(entry);        
+        if (entry.sending) return;
+        var at = picked.indexOf(entry);
         if (at === -1) return;
         picked.splice(at, 1);
         redraw();
@@ -463,7 +450,6 @@
       return li;
     }
 
-   
     function draw(){
       for (var i = list.children.length; i < picked.length; i++){
         list.appendChild(rowFor(picked[i], i));
@@ -513,7 +499,6 @@
 
       var anyBig = picked.some(function(p){ return !p.done && p.file.size > FALLBACK_MAX; });
 
-  
       if (anyBig && !directKnown){
         say('Checking whether these can be sent…');
         checkRoute().then(finishPick);
@@ -532,7 +517,6 @@
       finishPickIdle();
     }
 
-  
     function ceiling(){
       var limits = [];
       if (!directWorks) limits.push(FALLBACK_MAX);
@@ -564,7 +548,7 @@
         + ', ' + mb(total) + ' in all. ';
       var anyLeft = picked.some(function(p){ return !p.done && !p.hopeless; });
       var closing = !anyLeft
-        ? ''                                   
+        ? ''
         : heavy.length
           ? 'A long video takes many minutes on phone signal, so keep this page open. If it is easier, send it later on wifi.'
           : 'Keep this page open while they go.';
@@ -589,7 +573,6 @@
       }
     }
 
- 
     function ask(payload, ms){
       return new Promise(function(resolve, reject){
         var settled = false;
@@ -621,7 +604,7 @@
         name: entry.file.name,
         type: entry.file.type || 'application/octet-stream',
         size: entry.file.size,
-  
+
         origin: window.location.origin
       })
       .then(function(res){
@@ -629,7 +612,6 @@
           throw new Error('init: ' + ((res && res.error) || 'no session'));
         }
         return putChunks(res.session, entry, i).then(function(){
-          
           ask({
             action: 'upload-done',
             from: nameEl.value.trim(),
@@ -644,7 +626,6 @@
     function putChunks(session, entry, i){
       var total = entry.file.size;
 
-    
       function sendChunk(start, end, tries){
         inFlight = ('AbortController' in window) ? new AbortController() : null;
 
@@ -658,7 +639,7 @@
         })
         .catch(function(){
           if (stopped) throw new Error('stopped');
-        
+
           throw new Error('chunk: blocked or offline');
         })
         .then(function(r){
@@ -668,7 +649,6 @@
         .catch(function(err){
           if (stopped || String(err && err.message) === 'stopped') throw new Error('stopped');
 
-         
           var n = (tries || 0) + 1;
           if (n >= CHUNK_TRIES) throw err;
 
@@ -735,9 +715,9 @@
 
       var route = directWorks
         ? putDirect(entry, i).catch(function(err){
-            directWorks = false;         
+            directWorks = false;
             directKnown = true;
-           
+
             return putThroughScript(entry, i, err && err.message);
           })
         : putThroughScript(entry, i, 'direct route already refused this visit');
@@ -757,27 +737,25 @@
           }
 
           var tooBig = why === 'too large';
-          entry.hopeless = tooBig;       
+          entry.hopeless = tooBig;
           state(i, tooBig ? 'Too large to send' : 'Did not send', 'is-failed');
           progress(i, 0);
           return false;
         });
     }
 
-   
     function clearSent(){
       picked = picked.filter(function(p){ return !p.done && !p.hopeless; });
       redraw();
       say('');
     }
 
-   
     function retryable(){
       return picked.filter(function(p){ return !p.done && !p.hopeless; });
     }
 
     function openPicker(){
-      pick.value = '';     
+      pick.value = '';
       pick.click();
     }
 
@@ -788,7 +766,6 @@
       again.hidden = true;
       openPicker();
     }
-
 
     again.addEventListener('click', function(){
       if (sending) openPicker();
@@ -821,7 +798,6 @@
       stopped = false;
       send.textContent = 'Stop sending';
 
-    
       again.textContent = 'Add more photos';
       again.hidden = false;
 
@@ -830,7 +806,6 @@
       var sent = 0, failed = 0;
       picked.forEach(function(p){ p.tried = false; });
 
-     
       function next(){
         var entry = null, i = -1;
         for (var k = 0; k < picked.length; k++){
@@ -871,7 +846,6 @@
         var left = retryable().length;
         var tooBig = picked.filter(function(p){ return p.hopeless; }).length;
 
-       
         again.hidden = !left;
         send.textContent = left ? 'Try the rest again' : 'Send more photos';
 
@@ -950,7 +924,6 @@
     }
   }
 
-  
   function startScore(){ play(true); }
 
   toggle.addEventListener('click', function(){
@@ -970,11 +943,10 @@
     }
   });
 
- 
-  var RISEN = 1500;       
-  var HOLD = 3400;      
-  var ZOOM = 1250;        
-  var HOLD_CALM = 1600;   
+  var RISEN = 1500;
+  var HOLD = 3400;
+  var ZOOM = 1250;
+  var HOLD_CALM = 1600;
 
   var card     = document.querySelector('.env-card');
   var envelope = document.querySelector('.envelope');
@@ -983,7 +955,6 @@
   var opened = false;
   var handoff = null;
 
-  
   function zoomCard(){
     if (!overture.isConnected || calm) return enterSuite();
     window.clearTimeout(handoff);
@@ -991,10 +962,8 @@
     var EASE = 'cubic-bezier(.4, 0, .2, 1)';
     var here = card.getBoundingClientRect();
 
-   
     overture.appendChild(card);
 
-  
     card.style.transition = 'none';
     card.style.transform  = 'none';
     card.style.position   = 'fixed';
@@ -1006,7 +975,7 @@
     card.style.width  = here.width  + 'px';
     card.style.height = here.height + 'px';
 
-    void card.offsetWidth;   
+    void card.offsetWidth;
 
     overture.classList.add('is-zooming');
 
@@ -1020,12 +989,11 @@
       'box-shadow .5s ease'
     ].join(', ');
 
-  
     var sheet = leaf ? leaf.getBoundingClientRect() : null;
 
     card.style.background  = 'var(--paper)';
     card.style.borderColor = 'transparent';
-    card.style.boxShadow   = '0 0 70px -34px rgba(17,17,16,.30)';   
+    card.style.boxShadow   = '0 0 70px -34px rgba(17,17,16,.30)';
     card.style.left   = (sheet ? sheet.left  : 0) + 'px';
     card.style.top    = '0px';
     card.style.width  = (sheet ? sheet.width : window.innerWidth) + 'px';
@@ -1038,13 +1006,13 @@
     if (suite.classList.contains('is-lit')) return;
     window.clearTimeout(handoff);
 
-    window.scrollTo(0, 0);                                   
-    document.documentElement.classList.remove('is-sealed');   
+    window.scrollTo(0, 0);
+    document.documentElement.classList.remove('is-sealed');
 
     suite.removeAttribute('aria-hidden');
     suite.classList.add('is-lit');
     reveal();
-    if (!score.paused && score.volume < 0.02) fadeUp();   
+    if (!score.paused && score.volume < 0.02) fadeUp();
 
     window.setTimeout(function(){
       if (overture.isConnected) overture.remove();
@@ -1057,7 +1025,6 @@
       }, calm ? 0 : 120);
     }
   }
-
 
   (function skipToSection(){
     var wanted = (window.location.hash || '').replace('#', '');
@@ -1075,7 +1042,6 @@
     overture.classList.add('is-open');
     startScore();
 
-   
     window.setTimeout(function(){
       if (!score.paused) fadeUp();
     }, calm ? 0 : RISEN);
@@ -1087,8 +1053,10 @@
     }, 600);
   }
 
-  document.getElementById('unseal').addEventListener('click', unseal);
-  document.getElementById('unseal-cue').addEventListener('click', unseal);
+  ['unseal', 'unseal-cue'].forEach(function(id){
+    var el = document.getElementById(id);
+    if (el) el.addEventListener('click', unseal);
+  });
 
   function reveal(){
     var items = Array.prototype.slice.call(document.querySelectorAll('.js-reveal'));
