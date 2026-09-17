@@ -24,7 +24,7 @@
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;1,300;1,400&family=Jost:wght@200;300;400&display=swap">
 
 <link rel="stylesheet" href="assets/css/reset.css?v=f89a6ac6">
-<link rel="stylesheet" href="assets/css/style.css?v=0ee02538">
+<link rel="stylesheet" href="assets/css/style.css?v=36d8bfad">
 </head>
 <body>
 
@@ -94,7 +94,19 @@
     <h1 class="display hero-names">
       John<span class="hero-amp">and</span>Maria
     </h1>
-    <p class="hero-date">02 · 02 · 2027</p>
+    <p class="ask"><em>John asked and Maria said yes!</em></p>
+
+    <div class="cal" role="img" aria-label="February 2027. The wedding is on Tuesday the second.">
+      <p class="cal-month">February 2027</p>
+      <div class="cal-grid" aria-hidden="true">
+        <span class="cal-h">Su</span><span class="cal-h">Mo</span><span class="cal-h">Tu</span><span class="cal-h">We</span><span class="cal-h">Th</span><span class="cal-h">Fr</span><span class="cal-h">Sa</span>
+        <span></span><span>1</span><span class="cal-day"><svg class="cal-heart" viewBox="0 0 24 22" fill="none" aria-hidden="true"><path d="M12 20.4C6.4 16.4 2 12.9 2 8.2 2 5 4.4 2.8 7.3 2.8c1.8 0 3.6.9 4.7 2.4 1.1-1.5 2.9-2.4 4.7-2.4C19.6 2.8 22 5 22 8.2c0 4.7-4.4 8.2-10 12.2Z" stroke="#C6C4BD" stroke-width="1.1" stroke-linejoin="round"/></svg><b>2</b></span><span>3</span><span>4</span><span>5</span><span>6</span>
+        <span>7</span><span>8</span><span>9</span><span>10</span><span>11</span><span>12</span><span>13</span>
+        <span>14</span><span>15</span><span>16</span><span>17</span><span>18</span><span>19</span><span>20</span>
+        <span>21</span><span>22</span><span>23</span><span>24</span><span>25</span><span>26</span><span>27</span>
+        <span>28</span>
+      </div>
+    </div>
   </section>
 
   <svg class="rule-pearl" viewBox="0 0 240 14" aria-hidden="true">
@@ -127,20 +139,6 @@
   </section>
 
   <section class="tight js-reveal">
-    <p class="ask"><em>John asked and Maria said yes!</em></p>
-
-    <div class="cal" role="img" aria-label="February 2027. The wedding is on Tuesday the second.">
-      <p class="cal-month">February 2027</p>
-      <div class="cal-grid" aria-hidden="true">
-        <span class="cal-h">Su</span><span class="cal-h">Mo</span><span class="cal-h">Tu</span><span class="cal-h">We</span><span class="cal-h">Th</span><span class="cal-h">Fr</span><span class="cal-h">Sa</span>
-        <span></span><span>1</span><span class="cal-day"><svg class="cal-heart" viewBox="0 0 24 22" fill="none" aria-hidden="true"><path d="M12 20.4C6.4 16.4 2 12.9 2 8.2 2 5 4.4 2.8 7.3 2.8c1.8 0 3.6.9 4.7 2.4 1.1-1.5 2.9-2.4 4.7-2.4C19.6 2.8 22 5 22 8.2c0 4.7-4.4 8.2-10 12.2Z" stroke="#C6C4BD" stroke-width="1.1" stroke-linejoin="round"/></svg><b>2</b></span><span>3</span><span>4</span><span>5</span><span>6</span>
-        <span>7</span><span>8</span><span>9</span><span>10</span><span>11</span><span>12</span><span>13</span>
-        <span>14</span><span>15</span><span>16</span><span>17</span><span>18</span><span>19</span><span>20</span>
-        <span>21</span><span>22</span><span>23</span><span>24</span><span>25</span><span>26</span><span>27</span>
-        <span>28</span>
-      </div>
-    </div>
-
     <p class="label">Until we say I do</p>
     <div class="count" id="count" role="timer" aria-live="off">
       <div class="count-unit"><span class="count-n" id="c-d">00</span><span class="count-l">Days</span></div>
@@ -330,16 +328,14 @@
       <input id="share-pick" type="file" accept="image/*,video/*" multiple hidden>
       <button class="rsvp-cta" type="button" id="share-choose">Choose photos and videos</button>
       <p class="field-note">
-        Photos and short clips travel best. Your phone prepares a video before
-        it can be sent, which on a long one takes a few minutes on its own, and
-        a full length recording may be more than this page can carry. Those are
-        very welcome straight from you to us.
+        Photos and short clips work best. A long video may take a while,
+        or be too big to send here.
       </p>
 
       <div class="share-qr">
         <img src="assets/img/qr-photos.svg" width="132" height="132"
              alt="A QR code that opens this page on a phone">
-        <p class="field-note">Scan to open this page on your phone, where your photos are</p>
+        <p class="field-note">Scan to open this on your phone</p>
       </div>
 
       <ul class="share-list" id="share-list"></ul>
@@ -410,8 +406,7 @@
       <ul class="guests" id="rsvp-guests"></ul>
 
       <p class="field-note" id="rsvp-others">
-        Reply for anyone you can answer for. Anyone left blank can reply
-        themselves later.
+        Anyone left blank can reply later.
       </p>
 
       <button class="rsvp-cta" type="button" id="rsvp-send">Confirm response</button>

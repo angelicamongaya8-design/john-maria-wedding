@@ -277,11 +277,6 @@ section.tight{ gap:1.1rem; }
   line-height:1.02;
 }
 .hero-amp{ font-style:italic; font-size:.62em; color:var(--ink-soft); display:block; margin-block:.12em; letter-spacing:0; }
-.hero-date{
-  font-family: var(--util); font-weight:200;
-  font-size:.8125rem; letter-spacing:.52em; text-transform:uppercase;
-  color: var(--ink-soft); padding-left:.52em;
-}
 
 .ask{
   font-family: var(--display);
