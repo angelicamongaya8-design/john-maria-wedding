@@ -8,13 +8,10 @@
 <meta name="description" content="John Rolly Gumbi and Ma. Rhea Gabas invite you to an intimate wedding in the forest. 2 February 2027, Timmy in the Woods, Antipolo, Rizal.">
 <meta name="theme-color" content="#FAFAF8">
 
-<!-- Reachable by anyone with the link, but kept out of search results.
-     The couple asked for a small, private celebration; the guest list
-     and the venue should not be turning up in a Google search. -->
+
 <meta name="robots" content="noindex, nofollow">
 <meta name="googlebot" content="noindex, nofollow">
 
-<!-- social preview -->
 <meta property="og:type" content="website">
 <meta property="og:title" content="John + Maria &middot; 02.02.2027">
 <meta property="og:description" content="An intimate wedding in the middle of the forest. Timmy in the Woods, Antipolo.">
@@ -32,10 +29,8 @@
 </head>
 <body>
 
-<!-- ══ pattern defs: lace + pearls, drawn once, used throughout ══ -->
 <svg width="0" height="0" aria-hidden="true" focusable="false" style="position:absolute">
   <defs>
-    <!-- scalloped lace hem -->
     <pattern id="lace" x="0" y="0" width="22" height="20" patternUnits="userSpaceOnUse">
       <path d="M0 1 H22" fill="none" stroke="#DEDCD6" stroke-width="1"/>
       <path d="M0 1 A11 11 0 0 0 22 1" fill="none" stroke="#DEDCD6" stroke-width="1"/>
@@ -43,7 +38,6 @@
       <circle cx="3" cy="4" r="1" fill="#DEDCD6"/>
       <circle cx="19" cy="4" r="1" fill="#DEDCD6"/>
     </pattern>
-    <!-- pearl -->
     <radialGradient id="pearl" cx="34%" cy="30%" r="72%">
       <stop offset="0%"  stop-color="#FFFFFF"/>
       <stop offset="52%" stop-color="#F4F2ED"/>
@@ -52,7 +46,6 @@
   </defs>
 </svg>
 
-<!-- ══════════════════ THE OVERTURE ══════════════════ -->
 <div id="overture">
   <div class="motes" id="motes" aria-hidden="true"></div>
 
@@ -92,11 +85,9 @@
   </div>
 </div>
 
-<!-- ══════════════════ THE SUITE ══════════════════ -->
 <main id="suite" aria-hidden="true">
 <div class="leaf">
 
-  <!-- ── hero ── -->
   <section class="hero tight">
     <img class="hero-mark" src="assets/img/monogram.png" alt="The J and M monogram in a lace-edged oval">
     <h1 class="display hero-names">
@@ -115,7 +106,6 @@
     <circle cx="144" cy="7" r="3.4" fill="url(#pearl)" stroke="#D6D4CC" stroke-width=".6"/>
   </svg>
 
-  <!-- ── invitation ── -->
   <section class="js-reveal">
     <p class="label">Are tying the knot</p>
     <p class="lede">
@@ -123,7 +113,6 @@
       intimate wedding in the middle of the forest.
     </p>
 
-    <!-- calla lily, drawn -->
     <svg class="botanical" width="56" height="92" viewBox="0 0 56 92" fill="none" aria-hidden="true">
       <g stroke="#C6C4BD" stroke-width="1.1" stroke-linecap="round" stroke-linejoin="round">
         <path d="M31 5C43 13 47 31 38 42c-6 7-16 6-19-1C15 32 20 12 31 5Z"/>
@@ -136,7 +125,6 @@
     </svg>
   </section>
 
-  <!-- ── countdown ── -->
   <section class="tight js-reveal">
     <p class="label">Until we say I do</p>
     <div class="count" id="count" role="timer" aria-live="off">
@@ -151,7 +139,6 @@
     <rect width="400" height="20" fill="url(#lace)"/>
   </svg>
 
-  <!-- ── ceremony & reception ── -->
   <section class="js-reveal">
     <p class="label">Ceremony and Reception</p>
     <div class="stack">
@@ -165,7 +152,6 @@
     </p>
   </section>
 
-  <!-- ── note from the woods ── -->
   <section class="js-reveal tight">
     <p class="label">A note from the woods</p>
     <ul class="notes">
@@ -182,7 +168,6 @@
     <circle cx="136" cy="7" r="3.4" fill="url(#pearl)" stroke="#D6D4CC" stroke-width=".6"/>
   </svg>
 
-  <!-- ── dress code ── -->
   <section class="js-reveal">
     <p class="label">Dress code</p>
     <p class="lede">
@@ -200,7 +185,6 @@
     <rect width="400" height="20" fill="url(#lace)"/>
   </svg>
 
-  <!-- ── entourage ── -->
   <section class="js-reveal">
     <p class="label">The entourage</p>
 
@@ -314,7 +298,6 @@
     <rect width="400" height="20" fill="url(#lace)"/>
   </svg>
 
-  <!-- ── photos & videos ── -->
   <section class="js-reveal" id="photos">
     <p class="label">Photos and videos</p>
     <p class="display share-head">Our story, <em>through your eyes</em></p>
@@ -324,8 +307,6 @@
     </p>
     <p class="time-mark" style="letter-spacing:.24em">Kindly let us post first</p>
 
-    <!-- Hidden until the script is reachable, so the section never offers a
-         button that cannot do anything. -->
     <div class="share" id="share" hidden>
       <label class="field-label" for="share-name">Your name</label>
       <input class="field" id="share-name" type="text" autocomplete="name"
@@ -340,8 +321,7 @@
         very welcome straight from you to us.
       </p>
 
-      <!-- Your photos are on your phone, not on the machine you are reading
-           this on. Shown only on the wider screens where that is true. -->
+ 
       <div class="share-qr">
         <img src="assets/img/qr-photos.svg" width="132" height="132"
              alt="A QR code that opens this page on a phone">
@@ -352,14 +332,11 @@
       <p class="field-note" id="share-msg" role="status" aria-live="polite" hidden></p>
       <button class="rsvp-cta" type="button" id="share-send" hidden>Send them</button>
 
-      <!-- The picker is at the top of this block, and after a long list it is
-           far off screen. Once anything has been attempted there has to be a
-           way onward from where the guest is actually looking. -->
+ 
       <button class="text-cta" type="button" id="share-again" hidden>Choose other photos</button>
     </div>
   </section>
 
-  <!-- ── gift guide ── -->
   <section class="js-reveal">
     <p class="label">Gift guide</p>
     <p class="lede" style="font-style:italic">
@@ -368,7 +345,6 @@
       we suggest.
     </p>
 
-    <!-- tulip, drawn -->
     <svg class="botanical" width="56" height="92" viewBox="0 0 56 92" fill="none" aria-hidden="true">
       <g stroke="#C6C4BD" stroke-width="1.1" stroke-linecap="round" stroke-linejoin="round">
         <path d="M28 9c-4 4-10 6-14 5 0 13 4 24 10 29 2.6 2 5.4 2 8 0 6-5 10-16 10-29-4 1-10-1-14-5Z"/>
@@ -385,7 +361,6 @@
     <rect width="400" height="20" fill="url(#lace)"/>
   </svg>
 
-  <!-- ── rsvp ── -->
   <section class="js-reveal" id="rsvp">
     <p class="label">RSVP</p>
     <p class="lede">
@@ -393,7 +368,6 @@
       on or before <span class="rsvp-by">the end of November</span>.
     </p>
 
-    <!-- shown only once a guest list is connected -->
     <form class="rsvp-find" id="rsvp-find" hidden>
       <label class="field-label" for="rsvp-name">Guest name</label>
       <input class="field" id="rsvp-name" name="name" type="text"
@@ -436,13 +410,11 @@
 
     <button class="text-cta" type="button" id="rsvp-again" hidden>Reply for someone else</button>
 
-    <!-- fallback while no guest list is connected -->
     <p class="label" id="rsvp-alt" style="letter-spacing:.2em;max-width:22rem">
       Kindly let us know so we can add you
     </p>
   </section>
 
-  <!-- ── privacy notice ── -->
   <section class="js-reveal tight">
     <p class="label">A private celebration</p>
     <p class="lede">
@@ -452,7 +424,6 @@
     </p>
   </section>
 
-  <!-- ── colophon ── -->
   <footer class="colophon js-reveal">
     <img class="colophon-mark" src="assets/img/monogram.png" alt="">
     <p class="send-off">We look forward to<br>celebrating with you.</p>
@@ -462,7 +433,6 @@
 </div>
 </main>
 
-<!-- ══ music ══ -->
 <audio id="score" loop preload="auto" hidden>
   <source src="assets/audio/score.mp3" type="audio/mpeg">
 </audio>
