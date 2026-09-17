@@ -83,12 +83,43 @@ a{ color:inherit; }
   background: var(--paper-deep);
   padding: 24px 16px calc(24px + env(safe-area-inset-bottom, 0px));
 
-  /* The sequence runs: seal lifts, flap opens, card rises, then the card
-     is held still long enough to actually read before the page fades in.
-     Times here are mirrored by HOLD in main.js — change both together. */
-  transition: opacity .9s ease 3.4s, visibility 0s linear 4.3s;
+  /* Seal lifts, flap opens, card rises, card is held still long enough to
+     read — then the card itself expands to become the page. The overture
+     never fades as a block; its parts leave individually so the card can
+     carry the transition. Times are mirrored by HOLD/ZOOM in main.js. */
 }
-#overture.is-open{ opacity:0; visibility:hidden; pointer-events:none; }
+/* everything except the card clears out, leaving the card alone on screen */
+#overture.is-zooming .env-body,
+#overture.is-zooming .env-front,
+#overture.is-zooming .env-flap,
+#overture.is-zooming .env-fold,
+#overture.is-zooming .env-lace,
+#overture.is-zooming .overture-eyebrow,
+#overture.is-zooming .open-cue,
+#overture.is-zooming .motes{
+  opacity:0;
+  transition: opacity .45s ease;
+  pointer-events:none;
+}
+
+/* The card grows until it is the page.
+   .is-open is still on the element and its .env-card rule sets the rise
+   transform at equal specificity — this needs both classes to outrank it. */
+#overture.is-zooming.is-open .env-card{
+  z-index:9;
+  border-color: transparent;
+  background: var(--paper);
+  box-shadow:none;
+  transform: translate(var(--zx, 0px), var(--zy, 0px)) scale(var(--zs, 1));
+  transition: transform 1.25s cubic-bezier(.4, 0, .2, 1),
+              background .5s ease,
+              box-shadow .5s ease,
+              border-color .4s ease;
+}
+#overture.is-zooming.is-open .env-card > *{
+  opacity:0;
+  transition: opacity .34s ease;
+}
 
 .overture-inner{
   display:grid; justify-items:center; gap:2.4rem;
@@ -129,11 +160,9 @@ a{ color:inherit; }
      context children sort by 3D position and ignore z-index, which paints
      the opened flap over the card that just rose out of the envelope */
   perspective: 1200px;
-  /* settles only as the whole overture fades — it must not vanish
-     while the card is still being read */
-  transition: transform .9s ease 3.4s;
+  transition: transform .8s ease;
 }
-#overture.is-open .envelope{ transform: translateY(10px) scale(.985); }
+#overture.is-zooming .envelope{ transform: translateY(12px) scale(.97); }
 
 .env-body{
   position:absolute; inset:0;
@@ -151,7 +180,10 @@ a{ color:inherit; }
   z-index:2;
   background: var(--paper-edge);
   border:1px solid var(--hair-soft);
-  display:grid; place-content:center; gap:.7rem;
+  /* content sits near the top of the card, so it clears the envelope
+     edge while the card is still seated in the pocket */
+  display:grid; align-content:start; justify-items:center; gap:.6rem;
+  padding: 1.15rem 1rem 0;
   text-align:center;
   transform: translateY(0);
   transition: transform .95s cubic-bezier(.22,.61,.36,1) .55s,
@@ -159,9 +191,9 @@ a{ color:inherit; }
   box-shadow: 0 10px 26px -20px rgba(17,17,16,.4);
 }
 #overture.is-open .env-card{
-  /* far enough that the whole message clears the envelope, with the
-     bottom edge still tucked inside the pocket */
-  transform: translateY(-92%);
+  /* far enough for the message to clear the envelope's edge, near
+     enough that the card is still visibly sitting in the pocket */
+  transform: translateY(-68%);
   box-shadow: 0 22px 40px -26px rgba(17,17,16,.45);
 }
 
@@ -234,7 +266,7 @@ a{ color:inherit; }
 }
 .seal:hover{ transform: scale(1.05); }
 .seal:focus-visible{ outline:2px solid var(--ink); outline-offset:6px; }
-#overture.is-open .seal{ transform: scale(.72) translateY(-10px); opacity:0; transition-delay:0s; }
+#overture.is-open .seal{ transform: scale(.72) translateY(-10px); opacity:0; transition-delay:0s; pointer-events:none; }
 
 .open-cue{
   font-family: var(--util); font-weight:300;
