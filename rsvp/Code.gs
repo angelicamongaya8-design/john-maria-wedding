@@ -35,17 +35,21 @@ var UPLOAD_FOLDER_NAME = 'John + Maria · Guest photos and videos';
  *  behind a link that goes around a wedding. */
 var BIG_FILES_KEY = 'bigfiles';
 
-/** The largest single file a guest may send, in MB.
+/** Where the line falls between a clip and a long video, in MB.
  *
- *  Not a technical limit: once the fast route is open Google will take a file
- *  of any size. This is the couple's own house rule, and it belongs to them,
- *  so it lives in the `Settings` tab under the key `maxfile` — a cell, not a
- *  redeploy. Leave it empty and DEFAULT_MAX_MB applies.
+ *  It sorts, it does not refuse: everything arrives either way, this only
+ *  decides which folder it lands in. Lives in the `Settings` tab under
+ *  `longvideo` — a cell, not a redeploy. Empty means DEFAULT_LONG_MB.
  *
  *  Roughly, from a phone: 1080p video runs about 60 MB a minute, 4K about
  *  three times that. So 100 MB is a minute or two, 500 MB is eight or ten. */
-var MAX_FILE_KEY   = 'maxfile';
-var DEFAULT_MAX_MB = 100;
+var LONG_VIDEO_KEY  = 'longvideo';
+var DEFAULT_LONG_MB = 100;
+
+/** The subfolders everything is sorted into, made on first use. */
+var PHOTO_FOLDER = 'Photos';
+var VIDEO_FOLDER = 'Videos';
+var LONG_FOLDER  = 'Long videos';
 
 /** The ceiling on the fallback path only. The ordinary path streams straight
  *  to Drive from the guest's phone and has no practical limit; this is the
@@ -309,20 +313,57 @@ function settingValue(key) {
 
 /** The `uploads` setting may hold a bare folder ID or the whole Drive URL,
  *  because one of those is what you get when you copy from the address bar. */
-function uploadFolder() {
-  var configured = settingValue('uploads') || UPLOAD_FOLDER;
+function folderFromSetting(key) {
+  var configured = settingValue(key);
+  if (!configured) return null;
 
-  if (configured) {
-    var match = configured.match(/[-\w]{25,}/);
-    if (match) {
-      try { return DriveApp.getFolderById(match[0]); } catch (ignored) {}
-    }
+  // A bare ID or the whole Drive URL, because the address bar gives you one
+  // and the share dialog gives you the other.
+  var match = configured.match(/[-\w]{25,}/);
+  if (!match) return null;
+
+  try { return DriveApp.getFolderById(match[0]); } catch (ignored) { return null; }
+}
+
+function uploadFolder() {
+  var configured = folderFromSetting('uploads');
+  if (configured) return configured;
+
+  if (UPLOAD_FOLDER) {
+    try { return DriveApp.getFolderById(UPLOAD_FOLDER); } catch (ignored) {}
   }
 
   var existing = DriveApp.getFoldersByName(UPLOAD_FOLDER_NAME);
   if (existing.hasNext()) return existing.next();
 
   return DriveApp.createFolder(UPLOAD_FOLDER_NAME);
+}
+
+/** Made on first use, not before, so an unused folder never appears. */
+function childFolder(parent, name) {
+  var found = parent.getFoldersByName(name);
+  return found.hasNext() ? found.next() : parent.createFolder(name);
+}
+
+/** Photos in one place, clips in another, the long ones in a third.
+ *
+ *  Nothing is turned away by this: a guest sends the file and the script
+ *  decides where it belongs. A guest cannot be asked to file their own
+ *  holiday snaps, and they should not have to open Drive to send a video. */
+function destinationFor(type, size) {
+  var root = uploadFolder();
+
+  if (String(type || '').indexOf('image/') === 0) {
+    return childFolder(root, PHOTO_FOLDER);
+  }
+
+  if (size > longVideoBytes()) {
+    // A folder named in Settings wins, so the long ones can be kept somewhere
+    // else entirely — a second account, say, when this one fills up.
+    return folderFromSetting(BIG_FILES_KEY) || childFolder(root, LONG_FOLDER);
+  }
+
+  return childFolder(root, VIDEO_FOLDER);
 }
 
 /** Keep the guest's name on the file, since Drive will only ever show the
@@ -354,11 +395,11 @@ function freeSpace() {
 }
 
 /** The house rule, read from the sheet. Accepts "100", "100 MB" or "1.5 GB". */
-function maxFileBytes() {
-  var raw = String(settingValue(MAX_FILE_KEY) || '').trim();
+function longVideoBytes() {
+  var raw = String(settingValue(LONG_VIDEO_KEY) || '').trim();
   var match = raw.match(/([\d.]+)\s*(gb|mb)?/i);
 
-  var mb = DEFAULT_MAX_MB;
+  var mb = DEFAULT_LONG_MB;
   if (match) {
     var n = parseFloat(match[1]);
     if (n > 0) mb = /gb/i.test(match[2] || '') ? n * 1024 : n;
@@ -371,6 +412,11 @@ function uploadInit(body) {
     var size = Number(body.size) || 0;
     var type = String(body.type || 'application/octet-stream');
     var name = uploadName(body.from, body.name);
+
+    // The page's route check opens a session it never sends to, purely to
+    // find out whether permission is in place. It must not leave a folder
+    // behind for a file that will never exist.
+    var where = body.probe ? uploadFolder() : destinationFor(type, size);
 
     var headers = {
       Authorization: 'Bearer ' + ScriptApp.getOAuthToken(),
@@ -393,7 +439,7 @@ function uploadInit(body) {
         method: 'post',
         contentType: 'application/json; charset=UTF-8',
         headers: headers,
-        payload: JSON.stringify({ name: name, parents: [uploadFolder().getId()] }),
+        payload: JSON.stringify({ name: name, parents: [where.getId()] }),
         muteHttpExceptions: true
       });
 
@@ -412,7 +458,7 @@ function uploadInit(body) {
 
     return json({
       ok: true, session: session, name: name,
-      free: freeSpace(), maxFile: maxFileBytes()
+      folder: where.getName(), free: freeSpace()
     });
 
   } catch (err) {
@@ -427,15 +473,16 @@ function uploadBlob(body) {
     if (!data) return json({ ok: false, error: 'no data' });
 
     var bytes = Utilities.base64Decode(data);
-    if (bytes.length > Math.min(FALLBACK_MAX, maxFileBytes())) {
+    if (bytes.length > FALLBACK_MAX) {
       return json({ ok: false, error: 'too large' });
     }
 
     var name = uploadName(body.from, body.name);
     var blob = Utilities.newBlob(bytes, String(body.type || 'application/octet-stream'), name);
-    var file = uploadFolder().createFile(blob);
+    var file = destinationFor(body.type, bytes.length).createFile(blob);
 
-    logUpload(body.from, name, bytes.length, 'fallback', body.why);
+    logUpload(body.from, name, bytes.length, 'fallback', body.why,
+      file.getParents().hasNext() ? file.getParents().next().getName() : '');
     return json({ ok: true, id: file.getId(), name: name });
 
   } catch (err) {
@@ -445,7 +492,8 @@ function uploadBlob(body) {
 
 function uploadDone(body) {
   try {
-    logUpload(body.from, body.name, Number(body.size) || 0, 'direct', '');
+    logUpload(body.from, body.name, Number(body.size) || 0, 'direct', '',
+      String(body.folder || ''));
     return json({ ok: true });
   } catch (err) {
     return json({ ok: false, error: String(err) });
@@ -456,14 +504,14 @@ function uploadDone(body) {
  *  and so a guest who asks "did mine go through" has an answer. It must
  *  never be the reason an upload reports failure: the file is already in
  *  Drive by the time this runs. */
-function logUpload(from, name, size, route, note) {
+function logUpload(from, name, size, route, note, folder) {
   try {
     var book = SpreadsheetApp.getActive();
     var sheet = book.getSheetByName(UPLOAD_SHEET);
 
     if (!sheet) {
       sheet = book.insertSheet(UPLOAD_SHEET);
-      sheet.appendRow(['Uploaded at', 'From', 'File', 'Size (MB)', 'Route', 'Note']);
+      sheet.appendRow(['Uploaded at', 'From', 'File', 'Size (MB)', 'Folder', 'Route', 'Note']);
       sheet.setFrozenRows(1);
     }
 
@@ -472,6 +520,7 @@ function logUpload(from, name, size, route, note) {
       String(from || ''),
       String(name || ''),
       Math.round((size / 1048576) * 100) / 100,
+      String(folder || ''),
       route,
       String(note || '').slice(0, 300)
     ]);
@@ -531,7 +580,9 @@ function authorise() {
     if (answer.ok && answer.session) {
       var left = freeSpace();
       report.push('Fast route  OK, Google opened an upload session');
-      report.push('Max file    ' + Math.round(maxFileBytes() / 1048576) + ' MB per file');
+      report.push('Long video  over ' + Math.round(longVideoBytes() / 1048576)
+        + ' MB goes to "' + (folderFromSetting(BIG_FILES_KEY)
+            ? folderFromSetting(BIG_FILES_KEY).getName() : LONG_FOLDER) + '"');
       report.push('Room left   ' + (left < 0
         ? 'unknown'
         : (Math.round((left / 1073741824) * 100) / 100) + ' GB in this Drive'));

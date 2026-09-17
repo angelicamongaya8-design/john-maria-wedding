@@ -362,7 +362,6 @@
     var directWorks = true;
     var directKnown = false;   // nothing has been tried yet this visit
     var roomLeft = -1;         // bytes Drive can still hold; -1 while unknown
-    var maxFile  = 100 * 1048576;   // the couple's house rule, until the script says otherwise
 
     /** Ask the script, once, whether Google will open an upload session at
      *  all. Only worth a round trip when someone has actually picked a file
@@ -373,6 +372,7 @@
 
       return ask({
         action: 'upload-init',
+        probe: true,
         from: '',
         name: 'route check',
         type: 'text/plain',
@@ -383,7 +383,6 @@
         directWorks = !!(res && res.ok && res.session);   // nothing is ever sent to it
         directKnown = true;
         if (res && typeof res.free === 'number') roomLeft = res.free;
-        if (res && typeof res.maxFile === 'number' && res.maxFile > 0) maxFile = res.maxFile;
         return directWorks;
       })
       .catch(function(){
@@ -531,9 +530,7 @@
 
       draw();
 
-      var anyBig = picked.some(function(p){
-        return !p.done && p.file.size > Math.min(FALLBACK_MAX, maxFile);
-      });
+      var anyBig = picked.some(function(p){ return !p.done && p.file.size > FALLBACK_MAX; });
 
       // Worth one question to the script when something heavy is in the batch:
       // it settles both whether the fast route is open and how much room is
@@ -548,21 +545,19 @@
       finishPick();
     });
 
-    /** Three things can stop a file, and the guest should meet whichever one
-     *  applies at the moment they pick it, not at 98 per cent of a gigabyte:
-     *  the couple's own per-file rule, what the slow route can carry when the
-     *  fast one is shut, and whether the Drive still has room. */
+    /** Nothing is turned away for being long any more — the script sorts a
+     *  long video into its own folder. Only two things can actually stop a
+     *  file: the slow route's own ceiling when the fast one is shut, and a
+     *  Drive with no room left. */
     function ceiling(){
-      var limits = [maxFile];
+      var limits = [];
       if (!directWorks) limits.push(FALLBACK_MAX);
       if (roomLeft >= 0) limits.push(roomLeft);
-      return Math.min.apply(null, limits);
+      return limits.length ? Math.min.apply(null, limits) : Infinity;
     }
 
     function whyRefused(size){
-      if (size > maxFile) return 'over';
-      if (!directWorks && size > FALLBACK_MAX) return 'route';
-      return 'room';
+      return (!directWorks && size > FALLBACK_MAX) ? 'route' : 'room';
     }
 
     function finishPick(){
@@ -599,15 +594,7 @@
 
       var them = overCap === 1 ? 'it' : 'those';
 
-      if (reason === 'over'){
-        // The couple's own rule, so name the number rather than just refusing.
-        sayWithDropOff(
-          opening + 'We can take up to ' + mb(maxFile) + ' a file, and '
-            + (overCap === 1 ? 'one is larger' : many.toLowerCase() + ' larger') + '. Kindly ',
-          overCap === 1 ? 'drop it here instead' : 'drop those here instead',
-          overCap === 1 ? 'send it to us directly' : 'send those to us directly',
-          closing, 'bad');
-      } else if (reason === 'room'){
+      if (reason === 'room'){
         say(opening + many + ' larger than the ' + mb(roomLeft)
           + ' of space left, so kindly send ' + them + ' to us directly. ' + closing, 'bad');
       } else {
@@ -668,6 +655,7 @@
             action: 'upload-done',
             from: nameEl.value.trim(),
             name: res.name || entry.file.name,
+            folder: res.folder || '',
             size: entry.file.size
           }).catch(function(){});
         });

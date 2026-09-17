@@ -249,28 +249,44 @@ couple instead.
 lets them delete the ones already there, and the collection everyone's photos
 land in should not be sitting behind a link that travels around a wedding.
 
-### How large a file a guest may send
+### Where each file lands
 
-Set it in the `Settings` tab under `maxfile`. A number, with or without a
+Nothing is turned away for being long. The script sorts what arrives:
+
+```
+<uploads folder>/
+  Photos/        every image
+  Videos/        clips at or under the longvideo size
+  Long videos/   anything larger
+```
+
+The subfolders are made on first use, so an empty one never appears. Set
+`bigfiles` in `Settings` and the long ones go there instead, which is how to
+keep them on a different account once this one fills up.
+
+The `Uploads` tab records which folder each file went to.
+
+### Where the line falls between a clip and a long video
+
+Set it in the `Settings` tab under `longvideo`. A number, with or without a
 unit: `100`, `100 MB`, `1.5 GB`. Leave it empty and 100 MB applies.
 
-Roughly, from a phone: 1080p video is about 60 MB a minute, 4K about three
-times that.
+It sorts, it does not refuse. Roughly, from a phone: 1080p video is about
+60 MB a minute, 4K about three times that.
 
-| `maxfile` | About |
+| `longvideo` | A clip is about |
 |---|---|
-| 100 MB | a minute or two of video, every photo |
+| 100 MB | a minute or two |
 | 250 MB | four or five minutes |
 | 500 MB | eight or ten minutes |
 
-A file over the limit is refused the moment it is picked, and the page names
-the figure rather than just saying no. Change the cell and the next guest gets
-the new rule; there is nothing to redeploy.
+Change the cell and the next guest is sorted by the new rule; there is nothing
+to redeploy.
 
 `authorise` prints what is currently in force:
 
 ```
-Max file    100 MB per file
+Long video  over 100 MB goes to "Long videos"
 Room left   11.4 GB in this Drive
 ```
 
