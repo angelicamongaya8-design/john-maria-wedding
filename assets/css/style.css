@@ -287,7 +287,10 @@ section.tight{ gap:1.1rem; }
 }
 .ask em{ font-style:italic; }
 
-.cal{ display:grid; gap:.9rem; justify-items:center; }
+.cal{
+  display:grid; gap:.9rem; justify-items:center;
+  width: min(94%, 18.5rem);
+}
 .hero .cal{ margin-top:.75rem; }
 .cal-month{
   font-family: var(--util); font-weight:300;
@@ -296,13 +299,14 @@ section.tight{ gap:1.1rem; }
 }
 .cal-grid{
   display:grid;
-  grid-template-columns: repeat(7, clamp(1.75rem, 7.6vw, 2.1rem));
+  grid-template-columns: repeat(7, 1fr);
+  width:100%;
   font-variant-numeric: tabular-nums;
 }
 .cal-grid > span{
   display:grid; place-items:center;
-  aspect-ratio:1;
-  font-size:.75rem; line-height:1; font-weight:300;
+  height: clamp(1.85rem, 7.4vw, 2.15rem);
+  font-size:.8125rem; line-height:1; font-weight:300;
   color: var(--ink-soft);
 }
 .cal-grid > .cal-h{
@@ -312,9 +316,9 @@ section.tight{ gap:1.1rem; }
 .cal-day{ position:relative; }
 .cal-day b{ position:relative; z-index:1; font-weight:400; color: var(--ink); }
 .cal-heart{
-  position:absolute; inset:0; margin:auto;
-  width:124%; height:124%; overflow:visible;
-  transform: translateY(6%);
+  position:absolute; left:50%; top:50%;
+  width:2.25rem; height:2.0625rem; overflow:visible;
+  transform: translate(-50%, -47%);
 }
 
 .count{
