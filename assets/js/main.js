@@ -183,7 +183,7 @@
       var rest = members.filter(function(m){ return m !== me; });
       if (rest.length){
         others.textContent = 'Also on this invitation: ' + rest.join(', ')
-          + '. Each guest replies for themselves — search again to reply for another.';
+          + '. Each guest replies for themselves. Search again to reply for another.';
         others.hidden = false;
       } else {
         others.hidden = true;
@@ -283,8 +283,8 @@
           again.hidden = false;
 
           say(yes
-            ? 'Thank you, ' + who + ' — your reply is in. We cannot wait to celebrate with you.'
-            : 'Thank you, ' + who + ' — your reply is in. You will be dearly missed.');
+            ? 'Thank you, ' + who + '. Your reply is in. We cannot wait to celebrate with you.'
+            : 'Thank you, ' + who + '. Your reply is in. You will be dearly missed.');
 
           msg.scrollIntoView({ behavior: calm ? 'auto' : 'smooth', block: 'center' });
         })
