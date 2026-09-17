@@ -119,6 +119,27 @@
     look.setAttribute('data-idle', look.textContent);
     send.setAttribute('data-idle', send.textContent);
 
+    var warmed = false;
+
+    function warm(){
+      if (warmed) return;
+      warmed = true;
+      fetch(RSVP_ENDPOINT + '?name=').catch(function(){});
+    }
+
+    input.addEventListener('focus', warm);
+
+    if ('IntersectionObserver' in window){
+      var watcher = new IntersectionObserver(function(entries){
+        entries.forEach(function(entry){
+          if (!entry.isIntersecting) return;
+          warm();
+          watcher.disconnect();
+        });
+      }, { rootMargin: '0px 0px -25% 0px' });
+      watcher.observe(find);
+    }
+
     find.addEventListener('submit', function(ev){
       ev.preventDefault();
       var name = input.value.trim();
@@ -128,10 +149,19 @@
       say('');
       busy(look, true, 'Looking…');
 
+      var slow = window.setTimeout(function(){
+        say('Still looking. This can take a few seconds.');
+      }, 4000);
+
+      function done(){
+        window.clearTimeout(slow);
+        busy(look, false);
+      }
+
       fetch(RSVP_ENDPOINT + '?name=' + encodeURIComponent(name))
         .then(function(r){ return r.json(); })
         .then(function(data){
-          busy(look, false);
+          done();
           if (!data || !data.found){
             say('We could not find that name. Kindly try your full name. If it still does not come up, please let us know.', 'bad');
             return;
@@ -140,7 +170,7 @@
           render(data);
         })
         .catch(function(){
-          busy(look, false);
+          done();
           say('Something went wrong reaching our guest list. Please try again in a moment, or let us know.', 'bad');
         });
     });
