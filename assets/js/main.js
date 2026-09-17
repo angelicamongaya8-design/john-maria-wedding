@@ -342,6 +342,7 @@
     var list   = document.getElementById('share-list');
     var msg    = document.getElementById('share-msg');
     var send   = document.getElementById('share-send');
+    var again  = document.getElementById('share-again');
 
     if (!box || !RSVP_ENDPOINT) return;   // nothing to upload to
     box.hidden = false;
@@ -351,6 +352,56 @@
     var FALLBACK_MAX = 18 * 1024 * 1024;  // matches the script's own ceiling
     var picked = [];
     var sending = false;
+
+    /* Once the direct route has been refused, it will be refused again for
+       every other file in the batch. Finding that out costs a round trip to
+       Apps Script each time, which is exactly the waiting the guest notices,
+       so the answer is remembered for the rest of the visit. */
+    var directWorks = true;
+
+    /* Where a guest can put a video this page cannot carry. Asked for only
+       when that actually happens, so an ordinary visit never pays for it. */
+    var bigFiles = null;
+
+    function dropOff(){
+      if (bigFiles !== null) return Promise.resolve(bigFiles);
+
+      return fetch(RSVP_ENDPOINT + '?folder=1')
+        .then(function(r){ return r.json(); })
+        .then(function(res){
+          bigFiles = (res && res.folder) || '';
+          return bigFiles;
+        })
+        .catch(function(){ bigFiles = ''; return ''; });
+    }
+
+    /** The closing line, with a real place to go when one is configured.
+     *  Built as a link rather than pasted as text, because a guest holding a
+     *  phone is not going to retype a Drive URL. */
+    function sayWithDropOff(before, after, tone){
+      dropOff().then(function(url){
+        if (!url){
+          say(before + 'kindly send those to John or Rhea directly. ' + after, tone);
+          return;
+        }
+
+        msg.textContent = '';
+        msg.appendChild(document.createTextNode(before));
+
+        var a = document.createElement('a');
+        a.className = 'map-cta';
+        a.href = url;
+        a.target = '_blank';
+        a.rel = 'noopener noreferrer';
+        a.textContent = 'drop them here instead';
+        msg.appendChild(a);
+
+        msg.appendChild(document.createTextNode('. ' + after));
+        msg.hidden = false;
+        if (tone) msg.setAttribute('data-tone', tone);
+        else msg.removeAttribute('data-tone');
+      });
+    }
 
     function say(text, tone){
       if (!text){ msg.hidden = true; return; }
@@ -404,8 +455,9 @@
       if (fill) fill.style.width = Math.round(fraction * 100) + '%';
 
       // A bar alone on a long upload reads as stuck. A number does not.
+      // Once a row has its verdict, the percentage must not write over it.
       var s = li.querySelector('.share-s');
-      if (s && !li.classList.contains('is-done')){
+      if (s && !li.classList.contains('is-done') && !li.classList.contains('is-failed')){
         s.textContent = Math.round(fraction * 100) + '%';
       }
     }
@@ -423,7 +475,7 @@
       var chosen = Array.prototype.slice.call(pick.files || []);
       if (!chosen.length) return;
 
-      if (picked.length && picked.every(function(p){ return p.done; })) picked = [];
+      if (picked.length && picked.every(function(p){ return p.done || p.hopeless; })) picked = [];
 
       chosen.forEach(function(file){
         picked.push({ file: file, done: false });
@@ -432,14 +484,35 @@
 
       draw();
 
-      var heavy = picked.filter(function(p){ return p.file.size > 200 * 1048576; });
+      // Once the slow route is the only one left, a file over its ceiling can
+      // be called before anyone waits on it rather than after.
+      var overCap = 0;
+      if (!directWorks){
+        picked.forEach(function(p, i){
+          if (p.done || p.file.size <= FALLBACK_MAX) return;
+          p.hopeless = true;
+          overCap++;
+          state(i, 'Too large to send', 'is-failed');
+        });
+      }
+
+      var heavy = picked.filter(function(p){ return !p.hopeless && p.file.size > 200 * 1048576; });
       var total = picked.reduce(function(n, p){ return n + p.file.size; }, 0);
 
-      say((picked.length === 1 ? 'One file' : picked.length + ' files')
-        + ', ' + mb(total) + ' in all. '
-        + (heavy.length
-            ? 'A long video takes many minutes on phone signal, so keep this page open. If it is easier, send it later on wifi.'
-            : 'Keep this page open while they go.'));
+      var opening = (picked.length === 1 ? 'One file' : picked.length + ' files')
+        + ', ' + mb(total) + ' in all. ';
+      var closing = heavy.length
+        ? 'A long video takes many minutes on phone signal, so keep this page open. If it is easier, send it later on wifi.'
+        : 'Keep this page open while they go.';
+
+      if (overCap){
+        sayWithDropOff(
+          opening + (overCap === 1 ? 'One is' : overCap + ' are')
+            + ' longer than this page can carry, so ',
+          closing);
+      } else {
+        say(opening + closing);
+      }
     });
 
     /** Apps Script is not fast, and a request to it can also simply hang.
@@ -590,22 +663,25 @@
       if (entry.done) return Promise.resolve(true);
       state(i, 'Sending');
 
-      return putDirect(entry, i)
-        .catch(function(err){
-          // Slower, and capped, but at least the photo arrives. The reason
-          // goes into the sheet rather than in front of the guest.
-          return putThroughScript(entry, i, err && err.message);
-        })
+      var route = directWorks
+        ? putDirect(entry, i).catch(function(err){
+            directWorks = false;         // do not pay for this discovery twice
+            // Slower, and capped, but at least the photo arrives. The reason
+            // goes into the sheet rather than in front of the guest.
+            return putThroughScript(entry, i, err && err.message);
+          })
+        : putThroughScript(entry, i, 'direct route already refused this visit');
+
+      return route
         .then(function(){
           entry.done = true;
           state(i, 'Sent', 'is-done');
           return true;
         })
         .catch(function(err){
-          var why = String(err && err.message) === 'too large'
-            ? 'Too large'
-            : 'Did not send';
-          state(i, why, 'is-failed');
+          var tooBig = String(err && err.message) === 'too large';
+          entry.hopeless = tooBig;       // retrying this changes nothing
+          state(i, tooBig ? 'Too large to send' : 'Did not send', 'is-failed');
           progress(i, 0);
           return false;
         });
@@ -616,19 +692,33 @@
      *  picker for the next batch. Leaving it saying "Send more" while doing
      *  nothing is what a guest reads as broken. */
     function clearSent(){
-      picked = picked.filter(function(p){ return !p.done; });
+      picked = picked.filter(function(p){ return !p.done && !p.hopeless; });
       draw();
       say('');
     }
 
+    /** What is left that another tap could actually change. A file the script
+     *  will never accept is not one of them. */
+    function retryable(){
+      return picked.filter(function(p){ return !p.done && !p.hopeless; });
+    }
+
+    function startPicking(){
+      picked = [];
+      draw();
+      say('');
+      again.hidden = true;
+      pick.value = '';     // choosing the same file again still counts as a change
+      pick.click();
+    }
+
+    again.addEventListener('click', startPicking);
+
     send.addEventListener('click', function(){
       if (sending) return;
 
-      var waiting = picked.filter(function(p){ return !p.done; });
-      if (!waiting.length){
-        clearSent();
-        pick.value = '';       // the same file again still counts as a change
-        pick.click();
+      if (!retryable().length){
+        startPicking();
         return;
       }
 
@@ -647,7 +737,7 @@
 
       var run = picked.reduce(function(chain, entry, i){
         return chain.then(function(){
-          if (entry.done) return;
+          if (entry.done || entry.hopeless) return;
           return sendOne(entry, i).then(function(ok){
             if (ok) sent++; else failed++;
           });
@@ -657,16 +747,36 @@
       run.then(function(){
         sending = false;
         send.disabled = false;
-        send.textContent = failed ? 'Try the rest again' : 'Send more photos';
+
+        var left = retryable().length;
+        var tooBig = picked.filter(function(p){ return p.hopeless; }).length;
+
+        // Always a way onward from the bottom of the list, whatever happened.
+        again.hidden = false;
+        send.textContent = left ? 'Try the rest again' : 'Send more photos';
 
         if (!failed){
           say(sent === 1
             ? 'Sent. Thank you for sharing it.'
             : 'All ' + sent + ' sent. Thank you for sharing them.');
+          return;
+        }
+
+        var lines = [];
+        if (sent) lines.push(sent + (sent === 1 ? ' sent' : ' sent'));
+        if (tooBig) lines.push(tooBig + (tooBig === 1 ? ' too large to send' : ' too large to send'));
+        if (left) lines.push(left + ' still to try');
+
+        var closing = left
+          ? 'Tap again for the rest.'
+          : 'Tap Choose other photos for another batch.';
+
+        if (tooBig){
+          sayWithDropOff(
+            lines.join(', ') + '. A long video is beyond what this page can carry, so ',
+            closing, 'bad');
         } else {
-          say(sent
-            ? sent + ' sent, ' + failed + ' did not go through. Tap again to retry those.'
-            : 'None of these went through. Kindly check your signal and tap again.', 'bad');
+          say(lines.join(', ') + '. ' + closing, 'bad');
         }
       });
     });

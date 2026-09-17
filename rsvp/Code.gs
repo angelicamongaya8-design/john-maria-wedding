@@ -26,6 +26,15 @@ var UPLOAD_SHEET   = 'Uploads';
 var UPLOAD_FOLDER  = '';
 var UPLOAD_FOLDER_NAME = 'John + Maria · Guest photos and videos';
 
+/** A SEPARATE folder, for the long videos this page cannot carry.
+ *
+ *  Put its URL in the `Settings` tab under the key `bigfiles`, and share
+ *  THAT folder as "Anyone with the link · Editor". Keep it separate from
+ *  the one above: a link that lets a stranger add files also lets them
+ *  delete the ones already there, and the collection should not be sitting
+ *  behind a link that goes around a wedding. */
+var BIG_FILES_KEY = 'bigfiles';
+
 /** The ceiling on the fallback path only. The ordinary path streams straight
  *  to Drive from the guest's phone and has no practical limit; this is the
  *  size below which a file can also survive the detour through Apps Script,
@@ -82,6 +91,13 @@ function guestRows() {
 
 function doGet(e) {
   try {
+    // Where to send a guest whose video is larger than the page can carry.
+    // Asked for only when that actually happens, so an ordinary visit costs
+    // this script nothing.
+    if (e && e.parameter && e.parameter.folder) {
+      return json({ ok: true, folder: settingValue(BIG_FILES_KEY) });
+    }
+
     var typed = norm((e && e.parameter && e.parameter.name) || '');
     if (!typed) return json({ found: false });
 
@@ -417,4 +433,72 @@ function logUpload(from, name, size, route, note) {
       String(note || '').slice(0, 300)
     ]);
   } catch (ignored) {}
+}
+
+
+/* ── run this once, from the editor ───────────────────────────
+ *
+ * Apps Script asks for permissions by reading the function you are about to
+ * run, not by reading the manifest. So running a function that only touches
+ * Drive gets you a consent screen about Drive, and the script is still left
+ * without permission to reach outside Google, which is what opening an
+ * upload session needs. The run then fails with:
+ *
+ *   Wala kang pahintulot na tumawag kay UrlFetchApp.fetch
+ *   Required permissions: .../auth/script.external_request
+ *
+ * This function touches everything the web app touches, so one consent
+ * screen covers the lot. It then opens a real upload session and throws it
+ * away again, which is the only way to find out from here whether the fast
+ * route actually works.
+ *
+ * Run ▸ authorise, accept the prompt, then read the Execution log.
+ * Afterwards: Deploy ▸ Manage deployments ▸ ✏️ ▸ New version ▸ Deploy.
+ */
+function authorise() {
+  var report = [];
+
+  try {
+    var folder = uploadFolder();
+    report.push('Drive       OK, uploads land in "' + folder.getName() + '"');
+  } catch (err) {
+    report.push('Drive       FAILED, ' + err);
+    Logger.log(report.join('\n'));
+    return;
+  }
+
+  try {
+    var sheet = SpreadsheetApp.getActive().getSheetByName(GUEST_SHEET);
+    report.push('Guest list  ' + (sheet ? 'OK, ' + (sheet.getLastRow() - 1) + ' names'
+                                        : 'FAILED, no sheet named "' + GUEST_SHEET + '"'));
+  } catch (err) {
+    report.push('Guest list  FAILED, ' + err);
+  }
+
+  try {
+    var probe = uploadInit({
+      from: 'Permission check',
+      name: 'delete-me.txt',
+      type: 'text/plain',
+      size: 1,
+      origin: 'https://gelaimongaya-design.github.io'
+    });
+    var answer = JSON.parse(probe.getContent());
+
+    if (answer.ok && answer.session) {
+      report.push('Fast route  OK, Google opened an upload session');
+
+      // Nothing was ever sent to it, so the session simply expires. Tidy up
+      // anyway, in case Drive made a placeholder.
+      try {
+        UrlFetchApp.fetch(answer.session, { method: 'delete', muteHttpExceptions: true });
+      } catch (ignored) {}
+    } else {
+      report.push('Fast route  FAILED, ' + (answer.error || 'no session'));
+    }
+  } catch (err) {
+    report.push('Fast route  FAILED, ' + err);
+  }
+
+  Logger.log(report.join('\n'));
 }

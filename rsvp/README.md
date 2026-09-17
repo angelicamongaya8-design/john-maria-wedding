@@ -179,10 +179,32 @@ A cell, not a redeploy.
 
 ### After adding this code
 
-The script now touches Drive and makes outside requests, which the first version
-did not. Google will ask for those permissions again, so **run `uploadFolder`
-once from the editor** (Run ▸ uploadFolder) and accept the prompt. Then deploy a
-**new version** of the web app. The URL does not change.
+The script now touches Drive and makes requests outside Google, which the first
+version did not.
+
+Apps Script decides which permissions to ask for by reading **the function you
+are about to run**, not the manifest and not the rest of the file. So running
+something that only touches Drive gets a consent screen about Drive, the script
+is still left without permission to reach outside Google, and every upload then
+falls to the slow route with this in the `Uploads` sheet:
+
+> Wala kang pahintulot na tumawag kay UrlFetchApp.fetch
+> Required permissions: .../auth/script.external_request
+
+**Run `authorise` once** (Run ▸ authorise). It touches everything the web app
+touches, so one consent screen covers the lot, and it opens a real upload
+session to prove the fast route works. Read the Execution log afterwards:
+
+```
+Drive       OK, uploads land in "..."
+Guest list  OK, 41 names
+Fast route  OK, Google opened an upload session
+```
+
+Then deploy a **new version** of the web app. The URL does not change.
+
+Adding a scope later means authorising again. A new deployment on its own does
+not ask, and the old permissions stay exactly as they were.
 
 ### Why the bytes do not pass through the script
 
@@ -197,6 +219,28 @@ accepts the bytes of one named file and grants nothing else.
 
 `uploadBlob` is the fallback for when the direct route is unavailable. It is
 capped at 18 MB, because there it really is the script carrying the payload.
+
+### Where a long video goes
+
+While the fast route is working there is no size limit at all. When it is not,
+the page can only carry about 18 MB, and a full length video is well past that.
+
+Make a **second** folder for those, share it as **Anyone with the link · Editor**,
+and put its URL in the `Settings` tab under `bigfiles`:
+
+| A | B |
+|---|---|
+| notify | mregabas@gmail.com |
+| uploads | https://drive.google.com/drive/folders/... |
+| bigfiles | https://drive.google.com/drive/folders/... |
+
+The page then offers that folder as a link, but only to a guest who actually
+has a file too large to send. Leave `bigfiles` empty and it says to contact the
+couple instead.
+
+**Keep the two folders separate.** A link that lets a stranger add files also
+lets them delete the ones already there, and the collection everyone's photos
+land in should not be sitting behind a link that travels around a wedding.
 
 ### Storage
 

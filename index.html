@@ -334,8 +334,10 @@
       <input id="share-pick" type="file" accept="image/*,video/*" multiple hidden>
       <button class="rsvp-cta" type="button" id="share-choose">Choose photos and videos</button>
       <p class="field-note">
-        Your phone prepares each video before sending, which on a long one can
-        take a few minutes on its own. Short clips travel best.
+        Photos and short clips travel best. Your phone prepares a video before
+        it can be sent, which on a long one takes a few minutes on its own, and
+        a full length recording may be more than this page can carry. Those are
+        very welcome straight from you to John or Rhea.
       </p>
 
       <!-- Your photos are on your phone, not on the machine you are reading
@@ -349,6 +351,11 @@
       <ul class="share-list" id="share-list"></ul>
       <p class="field-note" id="share-msg" role="status" aria-live="polite" hidden></p>
       <button class="rsvp-cta" type="button" id="share-send" hidden>Send them</button>
+
+      <!-- The picker is at the top of this block, and after a long list it is
+           far off screen. Once anything has been attempted there has to be a
+           way onward from where the guest is actually looking. -->
+      <button class="text-cta" type="button" id="share-again" hidden>Choose other photos</button>
     </div>
   </section>
 
@@ -470,6 +477,6 @@
   </svg>
 </button>
 
-<script src="assets/js/main.js?v=116c81b0" defer></script>
+<script src="assets/js/main.js?v=c12c6848" defer></script>
 </body>
 </html>
