@@ -1,9 +1,3 @@
-/* ──────────────────────────────────────────────────────────────
-   reset.css — the small baseline the page is authored against.
-   Mirrors what Claude's artifact host injects, so the standalone
-   page and the hosted version render identically.
-   ────────────────────────────────────────────────────────────── */
-
 :root{
   color-scheme: light;
   padding-top: env(safe-area-inset-top, 0px);
