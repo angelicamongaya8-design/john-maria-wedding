@@ -6,8 +6,8 @@
   --paper-deep: #F1F0EC;   /* envelope interior, recessed ground */
   --paper-edge: #FFFFFF;   /* lifted card */
   --ink:        #111110;   /* letterpress black */
-  --ink-soft:   #6E6C67;   /* secondary */
-  --ink-faint:  #9C9A94;   /* tertiary, captions */
+  --ink-soft:   #55534D;   /* secondary  7.4:1 on paper */
+  --ink-faint:  #6E6C66;   /* tertiary   5.0:1 on paper, was 2.7 and unreadable */
   --hair:       #DEDCD6;   /* rules, lace outlines */
   --hair-soft:  #ECEAE4;
   --pearl-hi:   #FFFFFF;
@@ -195,7 +195,7 @@ a{ color:inherit; }
 }
 
 .env-card .display{ font-size:1.625rem; }
-.env-card .label{ font-size:.625rem; letter-spacing:.22em; line-height:1.6; }
+.env-card .label{ font-size:.6875rem; letter-spacing:.2em; line-height:1.6; }
 
 /* flap */
 .env-flap{
@@ -449,7 +449,7 @@ section.tight{ gap:1.1rem; }
 }
 .field-label{
   font-family: var(--util); font-weight:300;
-  font-size:.625rem; letter-spacing:.3em; text-transform:uppercase;
+  font-size:.6875rem; letter-spacing:.26em; text-transform:uppercase;
   color: var(--ink-faint); padding-left:.3em;
 }
 .field{
@@ -470,7 +470,7 @@ section.tight{ gap:1.1rem; }
 
 .field-note{
   font-family: var(--util); font-weight:300;
-  font-size:.75rem; line-height:1.6;
+  font-size:.8125rem; line-height:1.65;
   color: var(--ink-faint);
   max-width:24rem;
 }
@@ -510,7 +510,7 @@ section.tight{ gap:1.1rem; }
 }
 .share-s{
   font-family: var(--util); font-weight:300;
-  font-size:.625rem; letter-spacing:.24em; text-transform:uppercase;
+  font-size:.6875rem; letter-spacing:.2em; text-transform:uppercase;
   color: var(--ink-faint);
   white-space:nowrap;
 }
