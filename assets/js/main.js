@@ -146,6 +146,7 @@
   // Then it expands until it IS the page — the envelope is what the
   // invitation comes out of, so the card has to carry the handover rather
   // than the two cross-fading past each other.
+  var RISEN = 1500;       // card is clear of the envelope by here
   var HOLD = 3400;        // card readable until here
   var ZOOM = 1250;        // card grows to fill the screen
   var HOLD_CALM = 1600;   // no motion: just time enough to read it
@@ -156,31 +157,59 @@
   var opened = false;
   var handoff = null;
 
+  // The card grows into the page by animating its BOX, not by scaling.
+  // Scaling a landscape card until it covers a portrait screen means a 5x
+  // blow-up and a shape that never matches the page — it stops reading as
+  // the same piece of paper. Widening and lengthening the sheet does.
   function zoomCard(){
     if (!overture.isConnected || calm) return enterSuite();
     window.clearTimeout(handoff);
 
-    // Work from the card's UNTRANSFORMED box: the transform we are about to
-    // set replaces the rise, so measuring the risen position would double it.
-    var env = envelope.getBoundingClientRect();
-    var w = card.offsetWidth;
-    var h = card.offsetHeight;
-    var left = env.left + card.offsetLeft;
-    var top  = env.top  + card.offsetTop;
+    var EASE = 'cubic-bezier(.4, 0, .2, 1)';
+    var here = card.getBoundingClientRect();
 
-    var vw = window.innerWidth;
-    var vh = window.innerHeight;
-    var scale = Math.max(vw / w, vh / h) * 1.06;
+    // The envelope sets perspective, and gets a transform on the way out.
+    // Both make it the containing block for position:fixed descendants, so
+    // a card left inside it would size against the ENVELOPE and stop at
+    // ~300px instead of covering the screen. Lift it out first.
+    overture.appendChild(card);
 
-    card.style.setProperty('--zx', (vw / 2 - (left + w / 2)).toFixed(1) + 'px');
-    card.style.setProperty('--zy', (vh / 2 - (top + h / 2)).toFixed(1) + 'px');
-    card.style.setProperty('--zs', scale.toFixed(3));
+    // pin it exactly where it appears, in viewport coordinates, with the
+    // rise folded into left/top so no transform is left to fight
+    card.style.transition = 'none';
+    card.style.transform  = 'none';
+    card.style.position   = 'fixed';
+    card.style.margin     = '0';
+    card.style.right  = 'auto';
+    card.style.bottom = 'auto';
+    card.style.left   = here.left   + 'px';
+    card.style.top    = here.top    + 'px';
+    card.style.width  = here.width  + 'px';
+    card.style.height = here.height + 'px';
+
+    void card.offsetWidth;   // commit that state before animating away from it
 
     overture.classList.add('is-zooming');
 
-    // hand over only once the card genuinely covers the viewport — any
-    // earlier and the page shows around its edges
-    handoff = window.setTimeout(enterSuite, ZOOM * 0.86);
+    card.style.transition = [
+      'left '   + ZOOM + 'ms ' + EASE,
+      'top '    + ZOOM + 'ms ' + EASE,
+      'width '  + ZOOM + 'ms ' + EASE,
+      'height ' + ZOOM + 'ms ' + EASE,
+      'background .5s ease',
+      'border-color .45s ease',
+      'box-shadow .5s ease'
+    ].join(', ');
+
+    card.style.background  = 'var(--paper)';
+    card.style.borderColor = 'transparent';
+    card.style.boxShadow   = 'none';
+    card.style.left   = '0px';
+    card.style.top    = '0px';
+    card.style.width  = '100%';   // fixed position: 100% of the viewport
+    card.style.height = '100%';
+
+    handoff = window.setTimeout(enterSuite, ZOOM * 0.92);
   }
 
   function enterSuite(){
@@ -190,7 +219,7 @@
     suite.removeAttribute('aria-hidden');
     suite.classList.add('is-lit');
     reveal();
-    if (!score.paused) fadeUp();   // the music arrives with the invitation
+    if (!score.paused && score.volume < 0.02) fadeUp();   // skipped ahead
 
     window.setTimeout(function(){
       if (overture.isConnected) overture.remove();
@@ -203,6 +232,13 @@
 
     overture.classList.add('is-open');
     startScore();
+
+    // The music comes up with the paper, not over the sealed envelope and
+    // not held back until the page. Playback already began, silently, inside
+    // the tap — this is only the volume arriving.
+    window.setTimeout(function(){
+      if (!score.paused) fadeUp();
+    }, calm ? 0 : RISEN);
 
     handoff = window.setTimeout(zoomCard, calm ? HOLD_CALM : HOLD);
 
