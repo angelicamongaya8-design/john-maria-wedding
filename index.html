@@ -28,7 +28,7 @@
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;1,300;1,400&family=Jost:wght@200;300;400&display=swap">
 
 <link rel="stylesheet" href="assets/css/reset.css?v=0418e889">
-<link rel="stylesheet" href="assets/css/style.css?v=c1903e6b">
+<link rel="stylesheet" href="assets/css/style.css?v=cbd3c1b4">
 </head>
 <body>
 
@@ -315,14 +315,28 @@
   </svg>
 
   <!-- ── photos & videos ── -->
-  <section class="js-reveal">
+  <section class="js-reveal" id="photos">
     <p class="label">Photos and videos</p>
     <p class="lede">
       While our photographers and videographers capture the day, we would love to see
-      your moments too. Please upload your photos and videos to the shared drive,
-      and tag us.
+      your moments too. Kindly send your photos and videos here, and tag us.
     </p>
     <p class="time-mark" style="letter-spacing:.24em">Kindly let the couple post first</p>
+
+    <!-- Hidden until the script is reachable, so the section never offers a
+         button that cannot do anything. -->
+    <div class="share" id="share" hidden>
+      <label class="field-label" for="share-name">Your name</label>
+      <input class="field" id="share-name" type="text" autocomplete="name"
+             placeholder="So they know whose photos these are">
+
+      <input id="share-pick" type="file" accept="image/*,video/*" multiple hidden>
+      <button class="rsvp-cta" type="button" id="share-choose">Choose photos and videos</button>
+
+      <ul class="share-list" id="share-list"></ul>
+      <p class="field-note" id="share-msg" role="status" aria-live="polite" hidden></p>
+      <button class="rsvp-cta" type="button" id="share-send" hidden>Send them</button>
+    </div>
   </section>
 
   <!-- ── gift guide ── -->
@@ -443,6 +457,6 @@
   </svg>
 </button>
 
-<script src="assets/js/main.js?v=5dcda977" defer></script>
+<script src="assets/js/main.js?v=1b4ea8a5" defer></script>
 </body>
 </html>

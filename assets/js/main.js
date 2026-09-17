@@ -318,6 +318,285 @@
     });
   })();
 
+  /* ─────────────────────────────────────────────────────────
+     GUESTS SENDING THEIR OWN PHOTOS
+
+     A guest is standing in a forest holding a 200 MB video on whatever
+     signal reaches Antipolo. Two things follow from that.
+
+     First, the bytes go straight from the phone to Google, never through
+     the script: the script only opens an upload session and hands back the
+     URL. So there is no ceiling on size, and a chunk that fails can be
+     retried on its own instead of restarting the file.
+
+     Second, everything is sequential and visible. One file at a time, a
+     thread filling under each, and a failure says so rather than leaving
+     someone to wonder — the worst outcome here is a guest who believes
+     their photos are safely sent when they are not.
+     ───────────────────────────────────────────────────────── */
+  (function share(){
+    var box    = document.getElementById('share');
+    var nameEl = document.getElementById('share-name');
+    var pick   = document.getElementById('share-pick');
+    var choose = document.getElementById('share-choose');
+    var list   = document.getElementById('share-list');
+    var msg    = document.getElementById('share-msg');
+    var send   = document.getElementById('share-send');
+
+    if (!box || !RSVP_ENDPOINT) return;   // nothing to upload to
+    box.hidden = false;
+
+    var CHUNK = 8 * 1024 * 1024;          // per PUT, so a retry is cheap
+    var FALLBACK_MAX = 18 * 1024 * 1024;  // matches the script's own ceiling
+    var picked = [];
+    var sending = false;
+
+    function say(text, tone){
+      if (!text){ msg.hidden = true; return; }
+      msg.textContent = text;
+      msg.hidden = false;
+      if (tone) msg.setAttribute('data-tone', tone);
+      else msg.removeAttribute('data-tone');
+    }
+
+    function mb(bytes){
+      return bytes < 1048576
+        ? Math.max(1, Math.round(bytes / 1024)) + ' KB'
+        : (Math.round((bytes / 1048576) * 10) / 10) + ' MB';
+    }
+
+    /* ── the list ── */
+    function draw(){
+      list.textContent = '';
+
+      picked.forEach(function(entry, i){
+        var li = document.createElement('li');
+        li.className = 'share-item';
+        li.setAttribute('data-i', String(i));
+
+        var f = document.createElement('p');
+        f.className = 'share-f';
+        f.textContent = entry.file.name;
+
+        var s = document.createElement('p');
+        s.className = 'share-s';
+        s.textContent = mb(entry.file.size);
+
+        var bar = document.createElement('div');
+        bar.className = 'share-bar';
+        bar.appendChild(document.createElement('span'));
+
+        li.appendChild(f);
+        li.appendChild(s);
+        li.appendChild(bar);
+        list.appendChild(li);
+      });
+
+      send.hidden = !picked.length;
+    }
+
+    function row(i){ return list.querySelector('[data-i="' + i + '"]'); }
+
+    function progress(i, fraction){
+      var li = row(i); if (!li) return;
+      var fill = li.querySelector('.share-bar span');
+      if (fill) fill.style.width = Math.round(fraction * 100) + '%';
+    }
+
+    function state(i, text, klass){
+      var li = row(i); if (!li) return;
+      var s = li.querySelector('.share-s');
+      if (s) s.textContent = text;
+      if (klass) li.classList.add(klass);
+    }
+
+    choose.addEventListener('click', function(){ pick.click(); });
+
+    pick.addEventListener('change', function(){
+      var chosen = Array.prototype.slice.call(pick.files || []);
+      if (!chosen.length) return;
+
+      chosen.forEach(function(file){
+        picked.push({ file: file, done: false });
+      });
+
+      draw();
+      say(picked.length === 1
+        ? 'One file ready to send.'
+        : picked.length + ' files ready to send.');
+    });
+
+    /* ── one file, streamed to Drive in chunks ── */
+    function putDirect(entry, i){
+      return fetch(RSVP_ENDPOINT, {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        body: JSON.stringify({
+          action: 'upload-init',
+          from: nameEl.value.trim(),
+          name: entry.file.name,
+          type: entry.file.type || 'application/octet-stream',
+          size: entry.file.size
+        })
+      })
+      .then(function(r){ return r.json(); })
+      .then(function(res){
+        if (!res || !res.ok || !res.session) throw new Error('no session');
+        return putChunks(res.session, entry, i).then(function(){
+          // The log is a convenience, never a reason to call a sent file failed.
+          return fetch(RSVP_ENDPOINT, {
+            method: 'POST',
+            headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+            body: JSON.stringify({
+              action: 'upload-done',
+              from: nameEl.value.trim(),
+              name: res.name || entry.file.name,
+              size: entry.file.size
+            })
+          }).catch(function(){});
+        });
+      });
+    }
+
+    function putChunks(session, entry, i){
+      var total = entry.file.size;
+
+      function step(start){
+        if (start >= total) return Promise.resolve();
+
+        var end = Math.min(start + CHUNK, total);
+        var slice = entry.file.slice(start, end);
+
+        return fetch(session, {
+          method: 'PUT',
+          headers: {
+            'Content-Range': 'bytes ' + start + '-' + (end - 1) + '/' + total
+          },
+          body: slice
+        })
+        .then(function(r){
+          // 308 means Google has the chunk and wants the next one.
+          if (r.status === 200 || r.status === 201){
+            progress(i, 1);
+            return;
+          }
+          if (r.status !== 308) throw new Error('chunk ' + r.status);
+
+          progress(i, end / total);
+          return step(end);
+        });
+      }
+
+      return step(0);
+    }
+
+    /* ── the fallback, for small files, when the direct route is shut ── */
+    function putThroughScript(entry, i){
+      if (entry.file.size > FALLBACK_MAX){
+        return Promise.reject(new Error('too large'));
+      }
+
+      return new Promise(function(resolve, reject){
+        var reader = new FileReader();
+        reader.onerror = function(){ reject(new Error('unreadable')); };
+        reader.onload = function(){
+          var data = String(reader.result || '');
+          var comma = data.indexOf(',');
+          resolve(comma === -1 ? data : data.slice(comma + 1));
+        };
+        reader.readAsDataURL(entry.file);
+      })
+      .then(function(base64){
+        progress(i, 0.6);
+        return fetch(RSVP_ENDPOINT, {
+          method: 'POST',
+          headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+          body: JSON.stringify({
+            action: 'upload-blob',
+            from: nameEl.value.trim(),
+            name: entry.file.name,
+            type: entry.file.type || 'application/octet-stream',
+            data: base64
+          })
+        });
+      })
+      .then(function(r){ return r.json(); })
+      .then(function(res){
+        if (!res || !res.ok) throw new Error((res && res.error) || 'refused');
+        progress(i, 1);
+      });
+    }
+
+    function sendOne(entry, i){
+      if (entry.done) return Promise.resolve(true);
+      state(i, 'Sending');
+
+      return putDirect(entry, i)
+        .catch(function(){ return putThroughScript(entry, i); })
+        .then(function(){
+          entry.done = true;
+          state(i, 'Sent', 'is-done');
+          return true;
+        })
+        .catch(function(err){
+          var why = String(err && err.message) === 'too large'
+            ? 'Too large'
+            : 'Did not send';
+          state(i, why, 'is-failed');
+          progress(i, 0);
+          return false;
+        });
+    }
+
+    send.addEventListener('click', function(){
+      if (sending) return;
+
+      if (!nameEl.value.trim()){
+        say('Kindly add your name first, so they know whose photos these are.', 'bad');
+        nameEl.focus();
+        return;
+      }
+
+      var waiting = picked.filter(function(p){ return !p.done; });
+      if (!waiting.length){
+        say('These have all been sent. Thank you.');
+        return;
+      }
+
+      sending = true;
+      send.disabled = true;
+      send.textContent = 'Sending';
+      say('Please keep this page open until it says they are through.');
+
+      var sent = 0, failed = 0;
+
+      var run = picked.reduce(function(chain, entry, i){
+        return chain.then(function(){
+          if (entry.done) return;
+          return sendOne(entry, i).then(function(ok){
+            if (ok) sent++; else failed++;
+          });
+        });
+      }, Promise.resolve());
+
+      run.then(function(){
+        sending = false;
+        send.disabled = false;
+        send.textContent = failed ? 'Try the rest again' : 'Send more';
+
+        if (!failed){
+          say(sent === 1
+            ? 'Sent. Thank you for sharing it.'
+            : 'All ' + sent + ' sent. Thank you for sharing them.');
+        } else {
+          say(sent
+            ? sent + ' sent, ' + failed + ' did not go through. Tap again to retry those.'
+            : 'None of these went through. Kindly check your signal and tap again.', 'bad');
+        }
+      });
+    });
+  })();
+
   /* ── music ─────────────────────────────────────────────── */
   var LEVEL = 0.55;
   var scoreBroken = false;
@@ -469,7 +748,7 @@
     handoff = window.setTimeout(enterSuite, ZOOM * 0.92);
   }
 
-  function enterSuite(){
+  function enterSuite(landOn){
     if (suite.classList.contains('is-lit')) return;
     window.clearTimeout(handoff);
 
@@ -484,7 +763,26 @@
     window.setTimeout(function(){
       if (overture.isConnected) overture.remove();
     }, calm ? 0 : 480);
+
+    if (landOn){
+      var target = document.getElementById(landOn);
+      if (target) window.setTimeout(function(){
+        target.scrollIntoView({ behavior: calm ? 'auto' : 'smooth', block: 'start' });
+      }, calm ? 0 : 120);
+    }
   }
+
+  /* A guest scanning the QR code at the reception wants the upload form, not
+     a ceremony they are already sitting in. The envelope is the first-time
+     arrival; a link that names a section skips straight to it. */
+  (function skipToSection(){
+    var wanted = (window.location.hash || '').replace('#', '');
+    if (!wanted || !document.getElementById(wanted)) return;
+
+    opened = true;
+    if (overture.isConnected) overture.remove();
+    enterSuite(wanted);
+  })();
 
   function unseal(){
     if (opened) return;

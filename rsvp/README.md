@@ -152,3 +152,55 @@ reason.
 deployments → edit → Version: New version → Deploy**. Saving alone does not
 update the live URL, which is the single most common reason a change seems
 to do nothing.
+
+
+---
+
+## Guest photos and videos
+
+The same web app URL now also takes uploads. Nothing new to deploy differently:
+it is the same script, the same deployment.
+
+### What to do in the Sheet
+
+Nothing is required. The first time a guest uploads, the script makes a folder
+in the script owner's Drive called **John + Maria · Guest photos and videos**,
+and an **Uploads** tab appears logging who sent what.
+
+To send them somewhere you have already made instead, open that folder in Drive,
+copy the URL, and put it in the `Settings` tab:
+
+| A | B |
+|---|---|
+| notify | mregabas@gmail.com |
+| uploads | https://drive.google.com/drive/folders/1AbCdEf... |
+
+A cell, not a redeploy.
+
+### After adding this code
+
+The script now touches Drive and makes outside requests, which the first version
+did not. Google will ask for those permissions again, so **run `uploadFolder`
+once from the editor** (Run ▸ uploadFolder) and accept the prompt. Then deploy a
+**new version** of the web app. The URL does not change.
+
+### Why the bytes do not pass through the script
+
+A guest's video can be 200 MB. Apps Script would have to carry that base64
+encoded inside one request, and the large ones simply would not fit.
+
+So `uploadInit` only opens a resumable upload session on Drive using the
+script's own credentials and hands the session URL back to the phone. The phone
+streams the file to Google directly, 8 MB at a time, and a chunk that fails on
+forest signal is retried on its own instead of restarting the file. That URL
+accepts the bytes of one named file and grants nothing else.
+
+`uploadBlob` is the fallback for when the direct route is unavailable. It is
+capped at 18 MB, because there it really is the script carrying the payload.
+
+### Storage
+
+Uploads land in the script owner's Drive and count against that account's quota
+(15 GB on a free Google account, shared with Gmail and Photos). A wedding's
+worth of guest video will exceed that. Watch the folder on the day, and either
+move it to an account with room or clear space before the reception.

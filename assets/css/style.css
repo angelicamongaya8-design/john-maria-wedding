@@ -476,6 +476,50 @@ section.tight{ gap:1.1rem; }
 }
 .field-note[data-tone="bad"]{ color: var(--ink); }
 
+/* ── guests sending their own photos ───────────────────── */
+.share{
+  display:grid; gap:1rem; justify-items:center;
+  width:100%; max-width:24rem;
+  margin-top:1.8rem;
+}
+.share-list{
+  list-style:none; margin:0; padding:0;
+  width:100%;
+  display:grid; gap:.55rem;
+}
+.share-item{
+  display:grid; grid-template-columns:1fr auto; gap:.6rem; align-items:baseline;
+  border-bottom:1px solid var(--hair);
+  padding-bottom:.5rem;
+}
+.share-f{
+  font-family: var(--display); font-size:.9375rem; color: var(--ink);
+  overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+  text-align:left;
+}
+.share-s{
+  font-family: var(--util); font-weight:300;
+  font-size:.625rem; letter-spacing:.24em; text-transform:uppercase;
+  color: var(--ink-faint);
+  white-space:nowrap;
+}
+.share-item.is-done .share-s{ color: var(--ink); }
+.share-item.is-failed .share-f{ color: var(--ink-faint); }
+
+/* A thread under each file that fills as its bytes go up. On a forest
+   connection this is the difference between waiting and giving up. */
+.share-bar{
+  grid-column:1 / -1;
+  height:1px; width:100%;
+  background: var(--hair);
+  overflow:hidden;
+}
+.share-bar span{
+  display:block; height:100%; width:0%;
+  background: var(--ink);
+  transition: width .25s ease;
+}
+
 .rsvp-party{
   display:grid; gap:1.4rem; justify-items:center;
   width:100%;
