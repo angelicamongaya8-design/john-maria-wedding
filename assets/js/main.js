@@ -365,6 +365,7 @@
     var FALLBACK_MAX = 18 * 1024 * 1024;
     var INIT_WAIT = 12000;
     var picked = [];
+    var seq = 0;
     var sending = false;
     var stopped = false;
     var inFlight = null;
@@ -388,7 +389,7 @@
       .then(function(res){
         directWorks = !!(res && res.ok && res.session);
         directKnown = true;
-        if (res && typeof res.free === 'number') roomLeft = res.free;
+        if (res && typeof res.free === 'number' && res.free >= 0) roomLeft = res.free;
         return directWorks;
       })
       .catch(function(){
@@ -451,10 +452,10 @@
         : (Math.round((bytes / 1048576) * 10) / 10) + ' MB';
     }
 
-    function rowFor(entry, i){
+    function rowFor(entry){
       var li = document.createElement('li');
       li.className = 'share-item';
-      li.setAttribute('data-i', String(i));
+      li.setAttribute('data-id', String(entry.id));
 
       var f = document.createElement('p');
       f.className = 'share-f';
@@ -491,7 +492,7 @@
 
     function draw(){
       for (var i = list.children.length; i < picked.length; i++){
-        list.appendChild(rowFor(picked[i], i));
+        list.appendChild(rowFor(picked[i]));
       }
       send.hidden = !picked.length;
     }
@@ -501,10 +502,10 @@
       draw();
     }
 
-    function row(i){ return list.querySelector('[data-i="' + i + '"]'); }
+    function row(id){ return list.querySelector('[data-id="' + id + '"]'); }
 
-    function progress(i, fraction){
-      var li = row(i); if (!li) return;
+    function progress(id, fraction){
+      var li = row(id); if (!li) return;
       var fill = li.querySelector('.share-bar span');
       if (fill) fill.style.width = Math.round(fraction * 100) + '%';
 
@@ -514,8 +515,8 @@
       }
     }
 
-    function state(i, text, klass){
-      var li = row(i); if (!li) return;
+    function state(id, text, klass){
+      var li = row(id); if (!li) return;
       var s = li.querySelector('.share-s');
       if (s) s.textContent = text;
       if (klass) li.classList.add(klass);
@@ -530,7 +531,7 @@
       if (picked.length && picked.every(function(p){ return p.done || p.hopeless; })) picked = [];
 
       chosen.forEach(function(file){
-        picked.push({ file: file, done: false });
+        picked.push({ id: ++seq, file: file, done: false });
       });
       send.textContent = 'Send them';
 
@@ -572,12 +573,12 @@
       var overCap = 0;
       var reason = '';
 
-      picked.forEach(function(p, i){
+      picked.forEach(function(p){
         if (p.done || p.file.size <= cap) return;
         p.hopeless = true;
         overCap++;
         reason = whyRefused(p.file.size);
-        state(i, reason === 'room' ? 'No room left for this' : 'Too large to send', 'is-failed');
+        state(p.id, reason === 'room' ? 'No room left for this' : 'Too large to send', 'is-failed');
       });
 
       var heavy = picked.filter(function(p){ return !p.hopeless && p.file.size > 200 * 1048576; });
@@ -653,13 +654,13 @@
       });
     }
 
-    function putDirect(entry, i){
+    function putDirect(entry, id){
       return openSession(entry, 0)
       .then(function(res){
         if (!res || !res.ok || !res.session){
           throw new Error('init: ' + ((res && res.error) || 'no session'));
         }
-        return putChunks(res.session, entry, i).then(function(){
+        return putChunks(res.session, entry, id).then(function(){
           ask({
             action: 'upload-done',
             from: nameEl.value.trim(),
@@ -671,7 +672,7 @@
       });
     }
 
-    function putChunks(session, entry, i){
+    function putChunks(session, entry, id){
       var total = entry.file.size;
 
       function sendChunk(start, end, tries){
@@ -712,7 +713,7 @@
 
         var end = Math.min(start + CHUNK, total);
         return sendChunk(start, end, 0).then(function(status){
-          progress(i, end / total);
+          progress(id, end / total);
           if (status === 308) return step(end);
         });
       }
@@ -720,7 +721,7 @@
       return step(0);
     }
 
-    function putThroughScript(entry, i, why){
+    function putThroughScript(entry, id, why){
       if (entry.file.size > FALLBACK_MAX){
         return Promise.reject(new Error('too large'));
       }
@@ -736,7 +737,7 @@
         reader.readAsDataURL(entry.file);
       })
       .then(function(base64){
-        progress(i, 0.6);
+        progress(id, 0.6);
         return fetch(RSVP_ENDPOINT, {
           method: 'POST',
           headers: { 'Content-Type': 'text/plain;charset=utf-8' },
@@ -753,16 +754,16 @@
       .then(function(r){ return r.json(); })
       .then(function(res){
         if (!res || !res.ok) throw new Error((res && res.error) || 'refused');
-        progress(i, 1);
+        progress(id, 1);
       });
     }
 
-    function sendOne(entry, i){
+    function sendOne(entry, id){
       if (entry.done) return Promise.resolve(true);
-      state(i, 'Sending');
+      state(id, 'Sending');
 
       var route = directWorks
-        ? putDirect(entry, i).catch(function(err){
+        ? putDirect(entry, id).catch(function(err){
             var why = String((err && err.message) || '');
 
             if (why !== 'timeout'){
@@ -770,28 +771,28 @@
               directKnown = true;
             }
 
-            return putThroughScript(entry, i, why);
+            return putThroughScript(entry, id, why);
           })
-        : putThroughScript(entry, i, 'direct route already refused this visit');
+        : putThroughScript(entry, id, 'direct route already refused this visit');
 
       return route
         .then(function(){
           entry.done = true;
-          state(i, 'Sent', 'is-done');
+          state(id, 'Sent', 'is-done');
           return true;
         })
         .catch(function(err){
           var why = String(err && err.message);
           if (why === 'stopped' || stopped){
-            state(i, 'Stopped', 'is-failed');
-            progress(i, 0);
+            state(id, 'Stopped', 'is-failed');
+            progress(id, 0);
             return false;
           }
 
           var tooBig = why === 'too large';
           entry.hopeless = tooBig;
-          state(i, tooBig ? 'Too large to send' : 'Did not send', 'is-failed');
-          progress(i, 0);
+          state(id, tooBig ? 'Too large to send' : 'Did not send', 'is-failed');
+          progress(id, 0);
           return false;
         });
     }
@@ -859,17 +860,17 @@
       picked.forEach(function(p){ p.tried = false; });
 
       function next(){
-        var entry = null, i = -1;
+        var entry = null;
         for (var k = 0; k < picked.length; k++){
           if (!picked[k].done && !picked[k].hopeless && !picked[k].tried){
-            entry = picked[k]; i = k; break;
+            entry = picked[k]; break;
           }
         }
         if (!entry || stopped) return Promise.resolve();
 
         entry.tried = true;
         entry.sending = true;
-        return sendOne(entry, i).then(function(ok){
+        return sendOne(entry, entry.id).then(function(ok){
           entry.sending = false;
           if (ok) sent++; else failed++;
           return next();

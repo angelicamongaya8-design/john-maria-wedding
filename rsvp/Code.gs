@@ -398,7 +398,8 @@ function uploadInit(body) {
 
     return json({
       ok: true, session: session, name: name,
-      folder: spot.label || where.getName(), free: freeSpace()
+      folder: spot.label || where.getName(),
+      free: body.probe ? freeSpace() : -1
     });
   } catch (err) {
     return json({ ok: false, error: String(err) });
