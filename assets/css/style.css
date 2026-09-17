@@ -506,6 +506,26 @@ section.tight{ gap:1.1rem; }
 .share-item.is-done .share-s{ color: var(--ink); }
 .share-item.is-failed .share-f{ color: var(--ink-faint); }
 
+/* Shown only where the reader is not already holding the camera roll. */
+.share-head{
+  font-size: var(--step-2);
+  max-width:20rem;
+  margin:.1rem 0 .2rem;
+}
+.share-head em{ font-style:italic; color: var(--ink-soft); }
+
+.share-qr{ display:none; }
+@media (min-width: 720px) and (hover: hover){
+  .share-qr{
+    display:grid; gap:.9rem; justify-items:center;
+    padding:1.3rem 1.5rem 1.1rem;
+    border:1px solid var(--hair);
+    background: var(--paper);
+  }
+  .share-qr img{ display:block; }
+  .share-qr .field-note{ max-width:16rem; text-align:center; }
+}
+
 /* A thread under each file that fills as its bytes go up. On a forest
    connection this is the difference between waiting and giving up. */
 .share-bar{

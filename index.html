@@ -28,7 +28,7 @@
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;1,300;1,400&family=Jost:wght@200;300;400&display=swap">
 
 <link rel="stylesheet" href="assets/css/reset.css?v=0418e889">
-<link rel="stylesheet" href="assets/css/style.css?v=cbd3c1b4">
+<link rel="stylesheet" href="assets/css/style.css?v=5d61e816">
 </head>
 <body>
 
@@ -317,6 +317,7 @@
   <!-- ── photos & videos ── -->
   <section class="js-reveal" id="photos">
     <p class="label">Photos and videos</p>
+    <p class="display share-head">Our story, <em>through your eyes</em></p>
     <p class="lede">
       While our photographers and videographers capture the day, we would love to see
       your moments too. Kindly send your photos and videos here, and tag us.
@@ -332,6 +333,14 @@
 
       <input id="share-pick" type="file" accept="image/*,video/*" multiple hidden>
       <button class="rsvp-cta" type="button" id="share-choose">Choose photos and videos</button>
+
+      <!-- Your photos are on your phone, not on the machine you are reading
+           this on. Shown only on the wider screens where that is true. -->
+      <div class="share-qr">
+        <img src="assets/img/qr-photos.svg" width="132" height="132"
+             alt="A QR code that opens this page on a phone">
+        <p class="field-note">Scan to open this page on your phone, where your photos are</p>
+      </div>
 
       <ul class="share-list" id="share-list"></ul>
       <p class="field-note" id="share-msg" role="status" aria-live="polite" hidden></p>
@@ -378,7 +387,7 @@
       <label class="field-label" for="rsvp-name">Guest name</label>
       <input class="field" id="rsvp-name" name="name" type="text"
              autocomplete="name" autocapitalize="words" spellcheck="false"
-             placeholder="Enter your name as written on the invitation">
+             placeholder="Enter your full name">
       <button class="rsvp-cta" type="submit" id="rsvp-look">Find my invitation</button>
     </form>
 
@@ -418,7 +427,7 @@
 
     <!-- fallback while no guest list is connected -->
     <p class="label" id="rsvp-alt" style="letter-spacing:.2em;max-width:22rem">
-      Kindly message John or Rhea to confirm your attendance
+      Kindly let us know so we can add you
     </p>
   </section>
 
@@ -457,6 +466,6 @@
   </svg>
 </button>
 
-<script src="assets/js/main.js?v=1b4ea8a5" defer></script>
+<script src="assets/js/main.js?v=559a7a25" defer></script>
 </body>
 </html>

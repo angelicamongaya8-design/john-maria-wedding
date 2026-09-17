@@ -66,7 +66,7 @@
 
      Paste the Google Apps Script web app URL below — the one ending
      in /exec — and the form appears. Leave it empty and the section
-     falls back to "reply to the invitation", with nothing broken on
+     falls back to a quiet line, with nothing broken on
      screen. The guest list itself never lives in this page: it stays
      in the couple's private Sheet, so a public repo cannot leak who
      was invited or how many seats they were given.
@@ -90,7 +90,7 @@
     if (!find || !RSVP_ENDPOINT) return;   // not connected yet
 
     find.hidden = false;
-    if (alt) alt.textContent = 'If your name does not come up, kindly message John or Rhea';
+    if (alt) alt.textContent = 'If your name does not come up, kindly let us know';
 
     var current = null;   // { party, members, me }
 
@@ -151,7 +151,7 @@
         .then(function(data){
           busy(look, false);
           if (!data || !data.found){
-            say('We could not find that name. Please enter it exactly as it appears on your invitation, or reply to the invitation directly.', 'bad');
+            say('We could not find that name. Kindly try your full name. If it still does not come up, please let us know.', 'bad');
             return;
           }
           current = data;
@@ -159,7 +159,7 @@
         })
         .catch(function(){
           busy(look, false);
-          say('Something went wrong reaching our guest list. Please try again, or reply to the invitation directly.', 'bad');
+          say('Something went wrong reaching our guest list. Please try again in a moment, or let us know.', 'bad');
         });
     });
 
