@@ -832,16 +832,26 @@
       return picked.filter(function(p){ return !p.done && !p.hopeless; });
     }
 
+    function openPicker(){
+      pick.value = '';     // choosing the same file again still counts as a change
+      pick.click();
+    }
+
     function startPicking(){
       picked = [];
       redraw();
       say('');
       again.hidden = true;
-      pick.value = '';     // choosing the same file again still counts as a change
-      pick.click();
+      openPicker();
     }
 
-    again.addEventListener('click', startPicking);
+    /** While a batch is running this button adds to it; the queue is read as
+     *  it stands, so a photo remembered halfway through goes with the rest.
+     *  Idle, it clears the finished list and starts a new batch. */
+    again.addEventListener('click', function(){
+      if (sending) openPicker();
+      else startPicking();
+    });
 
     function stopSending(){
       stopped = true;
@@ -868,7 +878,12 @@
       sending = true;
       stopped = false;
       send.textContent = 'Stop sending';
-      again.hidden = true;
+
+      // The picker sits above the list, off screen by now. Without this there
+      // is no way to add another photo without stopping the batch first.
+      again.textContent = 'Add more photos';
+      again.hidden = false;
+
       say('Please keep this page open until it says they are through.');
 
       var sent = 0, failed = 0;
@@ -901,6 +916,8 @@
         sending = false;
         send.disabled = false;
         inFlight = null;
+
+        again.textContent = 'Choose other photos';
 
         if (stopped){
           again.hidden = false;
