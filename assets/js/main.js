@@ -877,8 +877,11 @@
         var left = retryable().length;
         var tooBig = picked.filter(function(p){ return p.hopeless; }).length;
 
-        // Always a way onward from the bottom of the list, whatever happened.
-        again.hidden = false;
+        // Two controls only while they mean two different things. With
+        // nothing left to retry, the button below the list already clears
+        // the batch and opens the picker, so a second one saying the same
+        // is just something else to read.
+        again.hidden = !left;
         send.textContent = left ? 'Try the rest again' : 'Send more photos';
 
         if (!failed){
@@ -895,7 +898,7 @@
 
         var closing = left
           ? 'Tap again for the rest.'
-          : 'Tap Choose other photos for another batch.';
+          : 'Tap Send more photos for another batch.';
 
         if (tooBig){
           sayWithDropOff(
