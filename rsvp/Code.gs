@@ -103,6 +103,32 @@ function guestRows() {
 }
 
 
+/** Who has already replied, and what they said.
+ *
+ *  A reply is final: once it is on the Responses tab the page shows it back
+ *  rather than offering the buttons again, and a second attempt is refused
+ *  here too. Without both, a guest who opens the link twice quietly doubles
+ *  their row and the couple count it twice.
+ *
+ *  Keyed by the same forgiving comparison the lookup uses, and the last row
+ *  for a name wins, so rows already in the sheet from before this existed
+ *  still read correctly. */
+function repliedMap() {
+  var sheet = SpreadsheetApp.getActive().getSheetByName(RESPONSE_SHEET);
+  var map = {};
+  if (!sheet || sheet.getLastRow() < 2) return map;
+
+  var values = sheet.getDataRange().getValues();
+  for (var i = 1; i < values.length; i++) {
+    var name  = String(values[i][2] || '').trim();      // C: Guest
+    var reply = String(values[i][3] || '').trim();      // D: Reply
+    if (!name) continue;
+    map[norm(name)] = /joyfully/i.test(reply);
+  }
+  return map;
+}
+
+
 /* ── lookup ──────────────────────────────────────────────── */
 
 function doGet(e) {
@@ -143,7 +169,15 @@ function doGet(e) {
       .filter(function (row) { return row.party === hit.party; })
       .map(function (row) { return row.name; });
 
-    return json({ found: true, party: hit.party, members: members });
+    // What the page needs to show a reply back instead of asking for it again.
+    var already = repliedMap();
+    var replied = {};
+    members.forEach(function (name) {
+      var key = norm(name);
+      if (already.hasOwnProperty(key)) replied[name] = already[key];
+    });
+
+    return json({ found: true, party: hit.party, members: members, replied: replied });
 
   } catch (err) {
     return json({ found: false, error: String(err) });
@@ -180,6 +214,18 @@ function recordReplies(body) {
 
     var replies = body.replies || [];
     if (!replies.length) return json({ ok: false, error: 'no replies' });
+
+    // A page held open since before someone else answered, or simply opened
+    // twice, must not be able to write a second row for the same guest.
+    var already = repliedMap();
+    var fresh = replies.filter(function (r) {
+      return !already.hasOwnProperty(norm(r.name || ''));
+    });
+
+    if (!fresh.length) {
+      return json({ ok: false, error: 'already replied', already: true });
+    }
+    replies = fresh;
 
     var book = SpreadsheetApp.getActive();
     var sheet = book.getSheetByName(RESPONSE_SHEET);

@@ -169,9 +169,16 @@
        can reply for their children in one pass, and anyone unsure of
        another adult simply leaves them blank for that person to answer.
        Unanswered names are therefore visibly outstanding in the sheet,
-       rather than indistinguishable from a family that never replied. */
+       rather than indistinguishable from a family that never replied.
+
+       A reply already given comes back from the script and is shown as it
+       stands, with no buttons. It is not a draft to revise: the couple are
+       counting seats, and a name that can be answered twice is a name that
+       can be counted twice. */
     function render(data){
       var members = data.members || [];
+      var replied = data.replied || {};
+
       current = { party: data.party || '', members: members, done: {} };
 
       seats.textContent = members.length;
@@ -180,11 +187,27 @@
       list.textContent = '';
       members.forEach(function(person, i){ list.appendChild(guestRow(person, i)); });
 
-      others.hidden = members.length < 2;
+      members.forEach(function(person, i){
+        if (replied.hasOwnProperty(person)) markDone(i, person, replied[person]);
+      });
+
+      var waiting = members.filter(function(m){ return !current.done[m]; });
+
+      // The note explains the blank toggles, so it goes with them.
+      others.hidden = members.length < 2 || !waiting.length;
       party.hidden = false;
-      again.hidden = true;
+      again.hidden = waiting.length > 0;    // nothing left to answer: offer the way out
+      send.hidden = !waiting.length;
       busy(send, false);
-      say('');
+
+      if (!waiting.length){
+        say(members.length === 1
+          ? 'You have already replied. Thank you.'
+          : 'Everyone on this invitation has replied. Thank you.');
+      } else {
+        say('');
+      }
+
       party.scrollIntoView({ behavior: calm ? 'auto' : 'smooth', block: 'center' });
     }
 
@@ -288,6 +311,13 @@
       })
         .then(function(r){ return r.json(); })
         .then(function(res){
+          // The script refuses a name it already holds, so a page left open
+          // since someone else answered cannot write a second row.
+          if (res && res.already){
+            busy(send, false);
+            say('That has already been answered. Search again to see what is recorded.', 'bad');
+            return;
+          }
           if (!res || !res.ok) throw new Error('rejected');
 
           replies.forEach(function(r){ markDone(r.index, r.name, r.attending); });

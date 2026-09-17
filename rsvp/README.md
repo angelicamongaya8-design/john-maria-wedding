@@ -249,6 +249,16 @@ couple instead.
 lets them delete the ones already there, and the collection everyone's photos
 land in should not be sitting behind a link that travels around a wedding.
 
+### A reply is final
+
+Once a name is on the `Responses` tab, searching for it again shows what was
+recorded instead of the buttons, and the script refuses a second row for that
+name even from a page left open since before. One guest, one row, one seat
+counted.
+
+To undo a reply while testing, delete its row on `Responses`. The next search
+offers the buttons again.
+
 ### Where each file lands
 
 Nothing is turned away for being long. The script sorts what arrives:
