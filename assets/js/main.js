@@ -66,6 +66,32 @@
     fetch(RSVP_ENDPOINT + '?name=').catch(function(){});
   }
 
+  function askGoogle(url, options, ms){
+    var ctl = ('AbortController' in window) ? new AbortController() : null;
+    var bell = window.setTimeout(function(){
+      try { if (ctl) ctl.abort(); } catch (ignored) {}
+    }, ms);
+
+    var sent = {};
+    if (options) for (var k in options) if (options.hasOwnProperty(k)) sent[k] = options[k];
+    if (ctl) sent.signal = ctl.signal;
+
+    return fetch(url, sent)
+      .then(function(r){ window.clearTimeout(bell); return r.json(); },
+            function(err){ window.clearTimeout(bell); throw err; });
+  }
+
+  function askGoogleTwice(url, options){
+    return askGoogle(url, options, 20000).catch(function(){
+      return new Promise(function(go){ window.setTimeout(go, 1200); })
+        .then(function(){ return askGoogle(url, options, 30000); })
+        .then(function(res){
+          if (res && typeof res === 'object') res.retried = true;
+          return res;
+        });
+    });
+  }
+
   function wakeWhenSeen(el){
     if (!el) return;
     if (!('IntersectionObserver' in window)) return;
@@ -163,8 +189,7 @@
         busy(look, false);
       }
 
-      fetch(RSVP_ENDPOINT + '?name=' + encodeURIComponent(name))
-        .then(function(r){ return r.json(); })
+      askGoogleTwice(RSVP_ENDPOINT + '?name=' + encodeURIComponent(name))
         .then(function(data){
           done();
           if (!data || !data.found){
@@ -298,7 +323,7 @@
       busy(send, true, 'Sending');
       say('');
 
-      fetch(RSVP_ENDPOINT, {
+      askGoogleTwice(RSVP_ENDPOINT, {
         method: 'POST',
         headers: { 'Content-Type': 'text/plain;charset=utf-8' },
         body: JSON.stringify({
@@ -307,14 +332,15 @@
           replies: replies.map(function(r){ return { name: r.name, attending: r.attending }; })
         })
       })
-        .then(function(r){ return r.json(); })
         .then(function(res){
-          if (res && res.already){
+          var landed = res && res.already && res.retried;
+
+          if (res && res.already && !landed){
             busy(send, false);
             say('That has already been answered. Search again to see what is recorded.', 'bad');
             return;
           }
-          if (!res || !res.ok) throw new Error('rejected');
+          if (!res || (!res.ok && !landed)) throw new Error('rejected');
 
           replies.forEach(function(r){ markDone(r.index, r.name, r.attending); });
 
@@ -1096,6 +1122,7 @@
     suite.removeAttribute('aria-hidden');
     suite.classList.add('is-lit');
     reveal();
+    wakeScript();
     if (!score.paused && score.volume < 0.02) fadeUp();
 
     window.setTimeout(function(){
