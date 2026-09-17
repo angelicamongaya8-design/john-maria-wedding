@@ -560,9 +560,15 @@ function authorise() {
   }
 
   try {
-    var sheet = SpreadsheetApp.getActive().getSheetByName(GUEST_SHEET);
-    report.push('Guest list  ' + (sheet ? 'OK, ' + (sheet.getLastRow() - 1) + ' names'
-                                        : 'FAILED, no sheet named "' + GUEST_SHEET + '"'));
+    // Count what the lookup actually sees, not how far down the sheet goes.
+    // Clearing a row's cells leaves the row there, and a count taken from the
+    // last row keeps reporting names that were deleted.
+    var rows = guestRows();
+    var parties = {};
+    rows.forEach(function (row) { parties[row.party] = true; });
+
+    report.push('Guest list  OK, ' + rows.length + ' names in '
+      + Object.keys(parties).length + ' invitations');
   } catch (err) {
     report.push('Guest list  FAILED, ' + err);
   }
