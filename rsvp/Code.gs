@@ -1,75 +1,34 @@
-/**
- * John + Maria — RSVP backend
- *
- * The guest list lives in this spreadsheet and never in the website, so the
- * public repository cannot leak who was invited or how many seats each
- * family was given. The page only ever asks one question — "is this name on
- * the list, and who is in their party?" — and posts back the replies.
- *
- * Setup is in rsvp/README.md. Two sheets are expected:
- *
- *   Guests      A: Party        B: Name
- *   Responses   written by this script; create it empty, or let it appear
- *
- * Deploy as a Web app, execute as yourself, access "Anyone".
- */
+
 
 var GUEST_SHEET    = 'Guests';
 var RESPONSE_SHEET = 'Responses';
 var UPLOAD_SHEET   = 'Uploads';
 
-/** Where guest photos and videos land.
- *
- *  Leave this empty and the script makes a folder in the owner's Drive the
- *  first time someone uploads. To use a folder that already exists, put its
- *  ID in the `Settings` tab under the key `uploads` — a cell, not a redeploy. */
+
 var UPLOAD_FOLDER  = '';
 var UPLOAD_FOLDER_NAME = 'John + Maria · Guest photos and videos';
 
-/** A SEPARATE folder, for the long videos this page cannot carry.
- *
- *  Put its URL in the `Settings` tab under the key `bigfiles`, and share
- *  THAT folder as "Anyone with the link · Editor". Keep it separate from
- *  the one above: a link that lets a stranger add files also lets them
- *  delete the ones already there, and the collection should not be sitting
- *  behind a link that goes around a wedding. */
+
 var BIG_FILES_KEY = 'bigfiles';
 
-/** Where the line falls between a clip and a long video, in MB.
- *
- *  It sorts, it does not refuse: everything arrives either way, this only
- *  decides which folder it lands in. Lives in the `Settings` tab under
- *  `longvideo` — a cell, not a redeploy. Empty means DEFAULT_LONG_MB.
- *
- *  Roughly, from a phone: 1080p video runs about 60 MB a minute, 4K about
- *  three times that. So 100 MB is a minute or two, 500 MB is eight or ten. */
+
 var LONG_VIDEO_KEY  = 'longvideo';
 var DEFAULT_LONG_MB = 100;
 
-/** The subfolders everything is sorted into, made on first use. */
 var PHOTO_FOLDER = 'Photos';
 var VIDEO_FOLDER = 'Videos';
 var LONG_FOLDER  = 'Long videos';
 
-/** The ceiling on the fallback path only. The ordinary path streams straight
- *  to Drive from the guest's phone and has no practical limit; this is the
- *  size below which a file can also survive the detour through Apps Script,
- *  which has to carry it base64 encoded. */
+
 var FALLBACK_MAX = 18 * 1024 * 1024;
 
-/** Fallback for who gets an email as each reply lands.
- *
- *  Prefer setting this in the sheet instead — see notifyAddress() below.
- *  Editing this file means redeploying before the change reaches the live
- *  URL, and that trips people up every time. A cell does not. */
+
 var NOTIFY_EMAIL   = '';
 var SETTINGS_SHEET = 'Settings';
 
 
-/* ── helpers ─────────────────────────────────────────────── */
 
-/** Compare names forgivingly: case, accents, punctuation and double spaces
- *  should never be the reason a guest cannot find their own invitation. */
+
 function norm(value) {
   return String(value == null ? '' : value)
     .normalize('NFD')
@@ -103,16 +62,7 @@ function guestRows() {
 }
 
 
-/** Who has already replied, and what they said.
- *
- *  A reply is final: once it is on the Responses tab the page shows it back
- *  rather than offering the buttons again, and a second attempt is refused
- *  here too. Without both, a guest who opens the link twice quietly doubles
- *  their row and the couple count it twice.
- *
- *  Keyed by the same forgiving comparison the lookup uses, and the last row
- *  for a name wins, so rows already in the sheet from before this existed
- *  still read correctly. */
+
 function repliedMap() {
   var sheet = SpreadsheetApp.getActive().getSheetByName(RESPONSE_SHEET);
   var map = {};
@@ -129,7 +79,6 @@ function repliedMap() {
 }
 
 
-/* ── lookup ──────────────────────────────────────────────── */
 
 function doGet(e) {
   try {
@@ -185,7 +134,6 @@ function doGet(e) {
 }
 
 
-/* ── reply ───────────────────────────────────────────────── */
 
 function doPost(e) {
   var body;
@@ -195,9 +143,7 @@ function doPost(e) {
     return json({ ok: false, error: 'bad request' });
   }
 
-  // The same URL serves both the replies and the guests' photos. Anything
-  // without an action is a reply, which is how the page asked before uploads
-  // existed and how it must keep working.
+
   switch (body.action) {
     case 'upload-init': return uploadInit(body);
     case 'upload-blob': return uploadBlob(body);
@@ -210,13 +156,12 @@ function recordReplies(body) {
   var lock = LockService.getScriptLock();
 
   try {
-    lock.waitLock(20000);   // two families replying at once must not collide
+    lock.waitLock(20000);   
 
     var replies = body.replies || [];
     if (!replies.length) return json({ ok: false, error: 'no replies' });
 
-    // A page held open since before someone else answered, or simply opened
-    // twice, must not be able to write a second row for the same guest.
+   
     var already = repliedMap();
     var fresh = replies.filter(function (r) {
       return !already.hasOwnProperty(norm(r.name || ''));
@@ -264,15 +209,9 @@ function recordReplies(body) {
 }
 
 
-/* ── the nudge ───────────────────────────────────────────── */
 
-/** A reply that only lands in a spreadsheet is a reply nobody reads until
- *  they remember to look. This sends it. It must never be the reason a
- *  guest sees an error, so it swallows its own failures — the row is
- *  already saved by the time we get here. */
-/** Reads the address from a `Settings` tab — column A `notify`, column B the
- *  address — so it can be changed by typing in a cell, with no redeploy.
- *  Falls back to NOTIFY_EMAIL when there is no such tab or row. */
+
+
 function notifyAddress() {
   try {
     var sheet = SpreadsheetApp.getActive().getSheetByName(SETTINGS_SHEET);
@@ -322,25 +261,11 @@ function notify(party, replies) {
     });
 
   } catch (ignored) {
-    // the reply is safely recorded; a failed email is not the guest's problem
   }
 }
 
 
-/* ── guest photos and videos ──────────────────────────────────
- *
- * A guest at a wedding is standing in a forest on phone signal, holding a
- * 200 MB video. Carrying those bytes through Apps Script would mean base64
- * encoding them into a single POST, and the big ones simply would not fit.
- *
- * So the bytes never come here. This script only opens a resumable upload
- * session on Drive with its own credentials and hands the session URL back;
- * the phone then streams the file to Google directly, in chunks it can retry
- * one at a time. Nothing about the couple's Drive is exposed by that URL: it
- * accepts the bytes of one named file and nothing else.
- *
- * uploadBlob is the fallback for when that route is unavailable, and is
- * capped, because there it really is Apps Script carrying the payload. */
+
 
 function settingValue(key) {
   try {
@@ -357,14 +282,12 @@ function settingValue(key) {
   return '';
 }
 
-/** The `uploads` setting may hold a bare folder ID or the whole Drive URL,
- *  because one of those is what you get when you copy from the address bar. */
+
 function folderFromSetting(key) {
   var configured = settingValue(key);
   if (!configured) return null;
 
-  // A bare ID or the whole Drive URL, because the address bar gives you one
-  // and the share dialog gives you the other.
+
   var match = configured.match(/[-\w]{25,}/);
   if (!match) return null;
 
@@ -385,17 +308,13 @@ function uploadFolder() {
   return DriveApp.createFolder(UPLOAD_FOLDER_NAME);
 }
 
-/** Made on first use, not before, so an unused folder never appears. */
+
 function childFolder(parent, name) {
   var found = parent.getFoldersByName(name);
   return found.hasNext() ? found.next() : parent.createFolder(name);
 }
 
-/** Photos in one place, clips in another, the long ones in a third.
- *
- *  Nothing is turned away by this: a guest sends the file and the script
- *  decides where it belongs. A guest cannot be asked to file their own
- *  holiday snaps, and they should not have to open Drive to send a video. */
+
 function destinationFor(type, size) {
   var root = uploadFolder();
 
@@ -404,16 +323,14 @@ function destinationFor(type, size) {
   }
 
   if (size > longVideoBytes()) {
-    // A folder named in Settings wins, so the long ones can be kept somewhere
-    // else entirely — a second account, say, when this one fills up.
+    
     return folderFromSetting(BIG_FILES_KEY) || childFolder(root, LONG_FOLDER);
   }
 
   return childFolder(root, VIDEO_FOLDER);
 }
 
-/** Keep the guest's name on the file, since Drive will only ever show the
- *  couple that the script owner uploaded everything. */
+
 function uploadName(from, name) {
   var clean = String(name || 'photo')
     .replace(/[\\\/:*?"<>|]+/g, ' ')
@@ -425,22 +342,17 @@ function uploadName(from, name) {
   return who ? who + ' · ' + clean : clean;
 }
 
-/** What Drive can still hold, in bytes.
- *
- *  This is the only real ceiling once the fast route is open: Google takes a
- *  file of any size, but only while there is room for it. Better the page
- *  says so when a guest picks the file than after they have watched a
- *  gigabyte climb to 98 per cent. */
+
 function freeSpace() {
   try {
     var left = DriveApp.getStorageLimit() - DriveApp.getStorageUsed();
     return left > 0 ? left : 0;
   } catch (err) {
-    return -1;                       // unknown, so do not stop anyone
+    return -1;                      
   }
 }
 
-/** The house rule, read from the sheet. Accepts "100", "100 MB" or "1.5 GB". */
+
 function longVideoBytes() {
   var raw = String(settingValue(LONG_VIDEO_KEY) || '').trim();
   var match = raw.match(/([\d.]+)\s*(gb|mb)?/i);
@@ -459,9 +371,7 @@ function uploadInit(body) {
     var type = String(body.type || 'application/octet-stream');
     var name = uploadName(body.from, body.name);
 
-    // The page's route check opens a session it never sends to, purely to
-    // find out whether permission is in place. It must not leave a folder
-    // behind for a file that will never exist.
+  
     var where = body.probe ? uploadFolder() : destinationFor(type, size);
 
     var headers = {
@@ -470,12 +380,7 @@ function uploadInit(body) {
       'X-Upload-Content-Length': String(size)
     };
 
-    // The phone, not this script, is what will PUT the bytes, and that is a
-    // cross-origin request. Google decides whether to allow it from the
-    // Origin on THIS call, the one that opens the session — so the page
-    // sends its own origin along and it is passed through here. Without it
-    // the browser's preflight is refused and every upload quietly takes the
-    // slow route instead.
+    
     var origin = String(body.origin || '');
     if (/^https:\/\/[A-Za-z0-9.-]+(:\d+)?$/.test(origin)) headers.Origin = origin;
 
@@ -497,7 +402,7 @@ function uploadInit(body) {
       });
     }
 
-    // Header capitalisation is not guaranteed, so look for either spelling.
+    
     var sent = response.getAllHeaders();
     var session = sent.Location || sent.location || '';
     if (!session) return json({ ok: false, error: 'no session url' });
@@ -512,7 +417,6 @@ function uploadInit(body) {
   }
 }
 
-/** Small files, when the direct route is unavailable. */
 function uploadBlob(body) {
   try {
     var data = String(body.data || '');
@@ -546,10 +450,7 @@ function uploadDone(body) {
   }
 }
 
-/** A log, so the couple can see who sent what without opening every file,
- *  and so a guest who asks "did mine go through" has an answer. It must
- *  never be the reason an upload reports failure: the file is already in
- *  Drive by the time this runs. */
+
 function logUpload(from, name, size, route, note, folder) {
   try {
     var book = SpreadsheetApp.getActive();
@@ -574,25 +475,7 @@ function logUpload(from, name, size, route, note, folder) {
 }
 
 
-/* ── run this once, from the editor ───────────────────────────
- *
- * Apps Script asks for permissions by reading the function you are about to
- * run, not by reading the manifest. So running a function that only touches
- * Drive gets you a consent screen about Drive, and the script is still left
- * without permission to reach outside Google, which is what opening an
- * upload session needs. The run then fails with:
- *
- *   Wala kang pahintulot na tumawag kay UrlFetchApp.fetch
- *   Required permissions: .../auth/script.external_request
- *
- * This function touches everything the web app touches, so one consent
- * screen covers the lot. It then opens a real upload session and throws it
- * away again, which is the only way to find out from here whether the fast
- * route actually works.
- *
- * Run ▸ authorise, accept the prompt, then read the Execution log.
- * Afterwards: Deploy ▸ Manage deployments ▸ ✏️ ▸ New version ▸ Deploy.
- */
+
 function authorise() {
   var report = [];
 
@@ -606,9 +489,7 @@ function authorise() {
   }
 
   try {
-    // Count what the lookup actually sees, not how far down the sheet goes.
-    // Clearing a row's cells leaves the row there, and a count taken from the
-    // last row keeps reporting names that were deleted.
+    
     var rows = guestRows();
     var parties = {};
     rows.forEach(function (row) { parties[row.party] = true; });
@@ -639,8 +520,7 @@ function authorise() {
         ? 'unknown'
         : (Math.round((left / 1073741824) * 100) / 100) + ' GB in this Drive'));
 
-      // Nothing was ever sent to it, so the session simply expires. Tidy up
-      // anyway, in case Drive made a placeholder.
+     
       try {
         UrlFetchApp.fetch(answer.session, { method: 'delete', muteHttpExceptions: true });
       } catch (ignored) {}
