@@ -3,25 +3,12 @@
   "dependencies": {},
   "exceptionLogging": "STACKDRIVER",
   "runtimeVersion": "V8",
-
-  "_comment": [
-    "Apps Script normally guesses which permissions a script needs by reading",
-    "the code, and its guess for Drive is the narrow one. Creating a folder and",
-    "opening an upload session both need the full Drive scope, so the guess",
-    "falls short, the run fails, and the authorisation prompt comes back every",
-    "time because nothing it granted ever satisfies the call.",
-    "",
-    "Listing the scopes here ends that: the consent screen asks for exactly",
-    "these, once."
-  ],
-
   "oauthScopes": [
     "https://www.googleapis.com/auth/drive",
     "https://www.googleapis.com/auth/spreadsheets",
     "https://www.googleapis.com/auth/script.external_request",
     "https://www.googleapis.com/auth/script.send_mail"
   ],
-
   "webapp": {
     "executeAs": "USER_DEPLOYING",
     "access": "ANYONE_ANONYMOUS"

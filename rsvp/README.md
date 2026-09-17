@@ -191,6 +191,13 @@ falls to the slow route with this in the `Uploads` sheet:
 > Wala kang pahintulot na tumawag kay UrlFetchApp.fetch
 > Required permissions: .../auth/script.external_request
 
+First check `appsscript.json` in the editor (Project Settings ▸ Show
+'appsscript.json' manifest file). It must carry the `oauthScopes` list. Apps
+Script validates this file on save and will not keep a key it does not
+recognise, so paste it exactly as it appears in this folder, with nothing
+extra: a single stray field and the whole paste is refused, silently, leaving
+the manifest as it was.
+
 **Run `authorise` once** (Run ▸ authorise). It touches everything the web app
 touches, so one consent screen covers the lot, and it opens a real upload
 session to prove the fast route works. Read the Execution log afterwards:
