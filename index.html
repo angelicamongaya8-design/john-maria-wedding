@@ -28,7 +28,7 @@
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;1,300;1,400&family=Jost:wght@200;300;400&display=swap">
 
 <link rel="stylesheet" href="assets/css/reset.css?v=0418e889">
-<link rel="stylesheet" href="assets/css/style.css?v=077ae8c8">
+<link rel="stylesheet" href="assets/css/style.css?v=c31aa914">
 </head>
 <body>
 
@@ -384,12 +384,16 @@
       <p class="label">Confirm attendance</p>
       <ul class="guests" id="rsvp-guests"></ul>
 
+      <p class="field-note" id="rsvp-others" hidden></p>
+
       <button class="rsvp-cta" type="button" id="rsvp-send">Confirm response</button>
       <p class="field-note">
-        Kindly reply for each guest. Only confirmed guests can be
-        accommodated, and we are unable to receive plus&#8209;ones.
+        Only confirmed guests can be accommodated, and we are unable to
+        receive plus&#8209;ones.
       </p>
     </div>
+
+    <button class="text-cta" type="button" id="rsvp-again" hidden>Reply for someone else</button>
 
     <!-- fallback while no guest list is connected -->
     <p class="label" id="rsvp-alt" style="letter-spacing:.2em;max-width:22rem">
@@ -432,6 +436,6 @@
   </svg>
 </button>
 
-<script src="assets/js/main.js?v=ad1705fe" defer></script>
+<script src="assets/js/main.js?v=729bcc69" defer></script>
 </body>
 </html>

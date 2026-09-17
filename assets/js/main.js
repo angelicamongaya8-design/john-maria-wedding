@@ -82,7 +82,9 @@
     var seats  = document.getElementById('rsvp-seats');
     var seatsL = document.getElementById('rsvp-seats-l');
     var list   = document.getElementById('rsvp-guests');
+    var others = document.getElementById('rsvp-others');
     var send   = document.getElementById('rsvp-send');
+    var again  = document.getElementById('rsvp-again');
     var alt    = document.getElementById('rsvp-alt');
 
     if (!find || !RSVP_ENDPOINT) return;   // not connected yet
@@ -90,7 +92,34 @@
     find.hidden = false;
     if (alt) alt.textContent = 'Or simply reply to the invitation you received';
 
-    var current = null;
+    var current = null;   // { party, members, me }
+
+    /* Same forgiveness the script applies, so the page can work out WHICH
+       member of the party was looked up without another round trip. */
+    function norm(value){
+      return String(value == null ? '' : value)
+        .normalize('NFD').replace(/[̀-ͯ]/g, '')
+        .toLowerCase()
+        .replace(/[^a-z0-9 ]+/g, ' ')
+        .replace(/\s+/g, ' ')
+        .trim();
+    }
+
+    function whoWasLookedUp(typed, members){
+      var key = norm(typed);
+
+      for (var i = 0; i < members.length; i++){
+        if (norm(members[i]) === key) return members[i];
+      }
+
+      var words = key.split(' ');
+      var near = members.filter(function(m){
+        var parts = norm(m).split(' ');
+        return words.every(function(w){ return parts.indexOf(w) !== -1; });
+      });
+
+      return near.length === 1 ? near[0] : null;
+    }
 
     function say(text, tone){
       if (!text){ msg.hidden = true; return; }
@@ -134,68 +163,98 @@
         });
     });
 
-    /* ── show the party ── */
+    /* ── show the invitation ──
+       One person replies for themselves. Everyone on the invitation is
+       named so they know who else is still expected, but nobody is put in
+       the position of answering on another adult's behalf — if they are
+       asked to, they simply search again. */
     function render(data){
       var members = data.members || [];
+      var me = whoWasLookedUp(input.value, members) || members[0];
+
+      current = { party: data.party || '', members: members, me: me };
+
       seats.textContent = members.length;
       seatsL.textContent = members.length === 1 ? 'seat' : 'seats';
 
       list.textContent = '';
-      members.forEach(function(person, i){
-        var li = document.createElement('li');
-        var wrap = document.createElement('div');
-        wrap.className = 'guest';
+      list.appendChild(guestRow(me));
 
-        var n = document.createElement('p');
-        n.className = 'guest-n';
-        n.textContent = person;
-        wrap.appendChild(n);
-
-        var reply = document.createElement('div');
-        reply.className = 'reply';
-        reply.setAttribute('role', 'radiogroup');
-        reply.setAttribute('aria-label', 'Reply for ' + person);
-
-        [['yes', 'Joyfully accepts'], ['no', 'Regretfully declines']].forEach(function(opt){
-          var id = 'g' + i + '-' + opt[0];
-          var r = document.createElement('input');
-          r.type = 'radio'; r.name = 'guest-' + i; r.id = id; r.value = opt[0];
-          var l = document.createElement('label');
-          l.setAttribute('for', id);
-          l.textContent = opt[1];
-          reply.appendChild(r);
-          reply.appendChild(l);
-        });
-
-        // answering clears a "you still owe a reply for X" nudge
-        reply.addEventListener('change', function(){ say(''); });
-
-        wrap.appendChild(reply);
-        li.appendChild(wrap);
-        list.appendChild(li);
-      });
+      var rest = members.filter(function(m){ return m !== me; });
+      if (rest.length){
+        others.textContent = 'Also on this invitation: ' + rest.join(', ')
+          + '. Each guest replies for themselves — search again to reply for another.';
+        others.hidden = false;
+      } else {
+        others.hidden = true;
+      }
 
       party.hidden = false;
+      again.hidden = true;
       say('');
       party.scrollIntoView({ behavior: calm ? 'auto' : 'smooth', block: 'center' });
     }
+
+    function guestRow(person){
+      var li = document.createElement('li');
+      var wrap = document.createElement('div');
+      wrap.className = 'guest';
+
+      var n = document.createElement('p');
+      n.className = 'guest-n';
+      n.textContent = person;
+      wrap.appendChild(n);
+
+      var reply = document.createElement('div');
+      reply.className = 'reply';
+      reply.setAttribute('role', 'radiogroup');
+      reply.setAttribute('aria-label', 'Reply for ' + person);
+
+      [['yes', 'Joyfully accepts'], ['no', 'Regretfully declines']].forEach(function(opt){
+        var id = 'reply-' + opt[0];
+        var r = document.createElement('input');
+        r.type = 'radio'; r.name = 'reply'; r.id = id; r.value = opt[0];
+        var l = document.createElement('label');
+        l.setAttribute('for', id);
+        l.textContent = opt[1];
+        reply.appendChild(r);
+        reply.appendChild(l);
+      });
+
+      reply.addEventListener('change', function(){ say(''); });
+
+      wrap.appendChild(reply);
+      li.appendChild(wrap);
+      return li;
+    }
+
+    /* ── back to the search, for the next person ── */
+    function reset(){
+      current = null;
+      party.hidden = true;
+      others.hidden = true;
+      again.hidden = true;
+      find.hidden = false;
+      busy(send, false);
+      say('');
+      input.value = '';
+      input.focus();
+      find.scrollIntoView({ behavior: calm ? 'auto' : 'smooth', block: 'center' });
+    }
+
+    again.addEventListener('click', reset);
 
     /* ── send it ── */
     send.addEventListener('click', function(){
       if (!current) return;
 
-      var members = current.members || [];
-      var replies = [];
-      for (var i = 0; i < members.length; i++){
-        var picked = list.querySelector('input[name="guest-' + i + '"]:checked');
-        if (!picked){
-          say('Kindly reply for ' + members[i] + ' before confirming.', 'bad');
-          var row = list.children[i];
-          if (row) row.scrollIntoView({ behavior: calm ? 'auto' : 'smooth', block: 'center' });
-          return;
-        }
-        replies.push({ name: members[i], attending: picked.value === 'yes' });
+      var picked = list.querySelector('input[name="reply"]:checked');
+      if (!picked){
+        say('Kindly choose a reply for ' + current.me + ' before confirming.', 'bad');
+        return;
       }
+
+      var replies = [{ name: current.me, attending: picked.value === 'yes' }];
 
       busy(send, true, 'Sending…');
       say('');
@@ -214,9 +273,19 @@
         .then(function(r){ return r.json(); })
         .then(function(res){
           if (!res || !res.ok) throw new Error('rejected');
+
+          var who = current.me;
+          var yes = picked.value === 'yes';
+
           find.hidden = true;
           party.hidden = true;
-          say('Thank you — your reply is in. We cannot wait to celebrate with you.');
+          others.hidden = true;
+          again.hidden = false;
+
+          say(yes
+            ? 'Thank you, ' + who + ' — your reply is in. We cannot wait to celebrate with you.'
+            : 'Thank you, ' + who + ' — your reply is in. You will be dearly missed.');
+
           msg.scrollIntoView({ behavior: calm ? 'auto' : 'smooth', block: 'center' });
         })
         .catch(function(){

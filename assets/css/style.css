@@ -480,6 +480,18 @@ section.tight{ gap:1.1rem; }
   display:grid; gap:1.4rem; justify-items:center;
   width:100%;
 }
+
+.text-cta{
+  font-family: var(--util); font-weight:300;
+  font-size:.6875rem; letter-spacing:.3em; text-transform:uppercase;
+  color: var(--ink-soft);
+  background:none; border:0; padding:.5rem 0;
+  border-bottom:1px solid var(--hair);
+  cursor:pointer;
+  transition: color .3s ease, border-color .3s ease;
+}
+.text-cta:hover{ color: var(--ink); border-bottom-color: var(--ink); }
+.text-cta:focus-visible{ outline:2px solid var(--ink); outline-offset:4px; }
 .seats{ display:grid; gap:.3rem; justify-items:center; }
 .seats-n{
   font-family: var(--display); font-weight:300;
