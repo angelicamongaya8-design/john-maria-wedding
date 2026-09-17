@@ -288,6 +288,7 @@ section.tight{ gap:1.1rem; }
 .ask em{ font-style:italic; }
 
 .cal{ display:grid; gap:.9rem; justify-items:center; }
+.hero .cal{ margin-top:.75rem; }
 .cal-month{
   font-family: var(--util); font-weight:300;
   font-size:.625rem; letter-spacing:.34em; text-transform:uppercase;
