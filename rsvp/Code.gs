@@ -326,6 +326,21 @@ function uploadName(from, name) {
   return who ? who + ' · ' + clean : clean;
 }
 
+/** What Drive can still hold, in bytes.
+ *
+ *  This is the only real ceiling once the fast route is open: Google takes a
+ *  file of any size, but only while there is room for it. Better the page
+ *  says so when a guest picks the file than after they have watched a
+ *  gigabyte climb to 98 per cent. */
+function freeSpace() {
+  try {
+    var left = DriveApp.getStorageLimit() - DriveApp.getStorageUsed();
+    return left > 0 ? left : 0;
+  } catch (err) {
+    return -1;                       // unknown, so do not stop anyone
+  }
+}
+
 function uploadInit(body) {
   try {
     var size = Number(body.size) || 0;
@@ -370,7 +385,7 @@ function uploadInit(body) {
     var session = sent.Location || sent.location || '';
     if (!session) return json({ ok: false, error: 'no session url' });
 
-    return json({ ok: true, session: session, name: name });
+    return json({ ok: true, session: session, name: name, free: freeSpace() });
 
   } catch (err) {
     return json({ ok: false, error: String(err) });
@@ -486,7 +501,11 @@ function authorise() {
     var answer = JSON.parse(probe.getContent());
 
     if (answer.ok && answer.session) {
+      var left = freeSpace();
       report.push('Fast route  OK, Google opened an upload session');
+      report.push('Room left   ' + (left < 0
+        ? 'unknown'
+        : (Math.round((left / 1073741824) * 100) / 100) + ' GB in this Drive'));
 
       // Nothing was ever sent to it, so the session simply expires. Tidy up
       // anyway, in case Drive made a placeholder.

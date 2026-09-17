@@ -359,6 +359,7 @@
        so the answer is remembered for the rest of the visit. */
     var directWorks = true;
     var directKnown = false;   // nothing has been tried yet this visit
+    var roomLeft = -1;         // bytes Drive can still hold; -1 while unknown
 
     /** Ask the script, once, whether Google will open an upload session at
      *  all. Only worth a round trip when someone has actually picked a file
@@ -378,6 +379,7 @@
       .then(function(res){
         directWorks = !!(res && res.ok && res.session);   // nothing is ever sent to it
         directKnown = true;
+        if (res && typeof res.free === 'number') roomLeft = res.free;
         return directWorks;
       })
       .catch(function(){
@@ -514,9 +516,10 @@
 
       var anyBig = picked.some(function(p){ return !p.done && p.file.size > FALLBACK_MAX; });
 
-      // A file over the slow route's ceiling is only sendable if the fast one
-      // is open. Find that out now, so nobody waits out a 480 MB upload to be
-      // told at the end that it was never going to be accepted.
+      // Worth one question to the script when something heavy is in the batch:
+      // it settles both whether the fast route is open and how much room is
+      // left, which together are the only real ceiling. An ordinary handful of
+      // photos asks nothing.
       if (anyBig && !directKnown){
         say('Checking whether these can be sent…');
         checkRoute().then(finishPick);
@@ -526,33 +529,52 @@
       finishPick();
     });
 
+    /** Once the fast route is open Google will take a file of any size, but
+     *  only while the Drive it lands in has room. That, not an invented
+     *  number, is the ceiling — and a guest should meet it when they pick the
+     *  file, not at 98 per cent of a gigabyte. */
+    function ceiling(){
+      if (!directWorks) return FALLBACK_MAX;
+      return roomLeft >= 0 ? roomLeft : Infinity;
+    }
+
     function finishPick(){
+      var cap = ceiling();
       var overCap = 0;
-      if (!directWorks){
-        picked.forEach(function(p, i){
-          if (p.done || p.file.size <= FALLBACK_MAX) return;
-          p.hopeless = true;
-          overCap++;
-          state(i, 'Too large to send', 'is-failed');
-        });
-      }
+
+      picked.forEach(function(p, i){
+        if (p.done || p.file.size <= cap) return;
+        p.hopeless = true;
+        overCap++;
+        state(i, directWorks ? 'No room left for this' : 'Too large to send', 'is-failed');
+      });
 
       var heavy = picked.filter(function(p){ return !p.hopeless && p.file.size > 200 * 1048576; });
       var total = picked.reduce(function(n, p){ return n + p.file.size; }, 0);
 
       var opening = (picked.length === 1 ? 'One file' : picked.length + ' files')
         + ', ' + mb(total) + ' in all. ';
-      var closing = heavy.length
-        ? 'A long video takes many minutes on phone signal, so keep this page open. If it is easier, send it later on wifi.'
-        : 'Keep this page open while they go.';
+      var anyLeft = picked.some(function(p){ return !p.done && !p.hopeless; });
+      var closing = !anyLeft
+        ? ''                                   // nothing is going anywhere
+        : heavy.length
+          ? 'A long video takes many minutes on phone signal, so keep this page open. If it is easier, send it later on wifi.'
+          : 'Keep this page open while they go.';
 
-      if (overCap){
-        sayWithDropOff(
-          opening + (overCap === 1 ? 'One is' : overCap + ' are')
-            + ' longer than this page can carry, so ',
-          closing);
-      } else {
+      if (!overCap){
         say(opening + closing);
+        return;
+      }
+
+      var many = overCap === 1 ? 'One is' : overCap + ' are';
+
+      if (directWorks){
+        // Not the page's limit but the Drive's, so say which, and how much.
+        say(opening + many + ' larger than the '
+          + mb(roomLeft) + ' of space left, so kindly send '
+          + (overCap === 1 ? 'it' : 'those') + ' to us directly. ' + closing, 'bad');
+      } else {
+        sayWithDropOff(opening + many + ' longer than this page can carry, so ', closing);
       }
     }
 

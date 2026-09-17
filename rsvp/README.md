@@ -249,9 +249,21 @@ couple instead.
 lets them delete the ones already there, and the collection everyone's photos
 land in should not be sitting behind a link that travels around a wedding.
 
-### Storage
+### Storage, which is also the size limit
 
 Uploads land in the script owner's Drive and count against that account's quota
-(15 GB on a free Google account, shared with Gmail and Photos). A wedding's
-worth of guest video will exceed that. Watch the folder on the day, and either
-move it to an account with room or clear space before the reception.
+(15 GB on a free Google account, shared with Gmail and Photos).
+
+That quota IS the ceiling. Once the fast route is open Google will take a file
+of any size, so the page asks the script how much room is left and refuses
+anything larger at the moment it is picked, naming the figure. Nobody watches a
+gigabyte climb to 98 per cent and then finds out.
+
+`authorise` prints the same number, so it can be checked at any time:
+
+```
+Room left   11.4 GB in this Drive
+```
+
+A wedding's worth of guest video will still exceed 15 GB. Watch it on the day,
+and either clear space or move the collection to an account with room.
