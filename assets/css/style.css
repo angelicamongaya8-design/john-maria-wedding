@@ -277,19 +277,20 @@ section.tight{ gap:1.1rem; }
   line-height:1.02;
 }
 .hero-amp{ font-style:italic; font-size:.62em; color:var(--ink-soft); display:block; margin-block:.12em; letter-spacing:0; }
-.hero-ask{
-  font-family: var(--display);
-  font-size: clamp(1.0625rem, .9rem + .6vw, 1.3125rem);
-  font-weight:400; line-height:1.4;
-  color: var(--ink-soft);
-  margin:0; max-width:20rem; text-wrap:balance;
-}
-.hero-ask em{ font-style:italic; }
 .hero-date{
   font-family: var(--util); font-weight:200;
   font-size:.8125rem; letter-spacing:.52em; text-transform:uppercase;
   color: var(--ink-soft); padding-left:.52em;
 }
+
+.ask{
+  font-family: var(--display);
+  font-size: clamp(1.1875rem, .95rem + .9vw, 1.5rem);
+  font-weight:400; line-height:1.35;
+  color: var(--ink);
+  margin:0 0 .35rem; max-width:19rem; text-wrap:balance;
+}
+.ask em{ font-style:italic; }
 
 .cal{ display:grid; gap:.9rem; justify-items:center; }
 .cal-month{
