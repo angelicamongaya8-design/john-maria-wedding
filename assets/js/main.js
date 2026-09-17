@@ -7,14 +7,11 @@
   var toggle   = document.getElementById('music-toggle');
   var calm     = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
-  // The invitation is in the document the whole time, just hidden behind the
-  // overture — so a browser restoring the last scroll position drops the
-  // reader into the middle of the entourage the moment the envelope opens.
+  
   try { history.scrollRestoration = 'manual'; } catch (e) {}
-  document.documentElement.classList.add('is-sealed');   // locks scrolling
+  document.documentElement.classList.add('is-sealed');  
   window.scrollTo(0, 0);
 
-  /* ── drifting specks ───────────────────────────────────── */
   (function motes(){
     if (calm) return;
     var host = document.getElementById('motes');
@@ -31,7 +28,6 @@
     host.appendChild(frag);
   })();
 
-  /* ── countdown: 2 Feb 2027, 3:00 PM in Manila ──────────── */
   (function countdown(){
     var when = new Date('2027-02-02T15:00:00+08:00').getTime();
     var d = document.getElementById('c-d'),
@@ -61,16 +57,7 @@
     var timer = setInterval(tick, 1000);
   })();
 
-  /* ─────────────────────────────────────────────────────────
-     RSVP
-
-     Paste the Google Apps Script web app URL below — the one ending
-     in /exec — and the form appears. Leave it empty and the section
-     falls back to a quiet line, with nothing broken on
-     screen. The guest list itself never lives in this page: it stays
-     in the couple's private Sheet, so a public repo cannot leak who
-     was invited or how many seats they were given.
-     ───────────────────────────────────────────────────────── */
+  
   var RSVP_ENDPOINT = 'https://script.google.com/macros/s/AKfycbwX7itsDawc_Cr2QFfYpwr4Q4VMH3MoiU3BDVISYa8P35Sl_t4vzWMe3ndbmg5jAn4N/exec';
 
   (function rsvp(){
@@ -87,15 +74,14 @@
     var again  = document.getElementById('rsvp-again');
     var alt    = document.getElementById('rsvp-alt');
 
-    if (!find || !RSVP_ENDPOINT) return;   // not connected yet
+    if (!find || !RSVP_ENDPOINT) return;  
 
     find.hidden = false;
     if (alt) alt.textContent = 'If your name does not come up, kindly let us know';
 
-    var current = null;   // { party, members, me }
+    var current = null;   
 
-    /* Same forgiveness the script applies, so the page can work out WHICH
-       member of the party was looked up without another round trip. */
+    
     function norm(value){
       return String(value == null ? '' : value)
         .normalize('NFD').replace(/[̀-ͯ]/g, '')
@@ -136,7 +122,7 @@
     look.setAttribute('data-idle', look.textContent);
     send.setAttribute('data-idle', send.textContent);
 
-    /* ── find the invitation ── */
+ 
     find.addEventListener('submit', function(ev){
       ev.preventDefault();
       var name = input.value.trim();
@@ -163,18 +149,7 @@
         });
     });
 
-    /* ── show the invitation ──
-       Everyone on the invitation gets a control, as in the reference the
-       couple chose. But only the ones actually answered are sent: a parent
-       can reply for their children in one pass, and anyone unsure of
-       another adult simply leaves them blank for that person to answer.
-       Unanswered names are therefore visibly outstanding in the sheet,
-       rather than indistinguishable from a family that never replied.
-
-       A reply already given comes back from the script and is shown as it
-       stands, with no buttons. It is not a draft to revise: the couple are
-       counting seats, and a name that can be answered twice is a name that
-       can be counted twice. */
+   
     function render(data){
       var members = data.members || [];
       var replied = data.replied || {};
@@ -193,10 +168,9 @@
 
       var waiting = members.filter(function(m){ return !current.done[m]; });
 
-      // The note explains the blank toggles, so it goes with them.
       others.hidden = members.length < 2 || !waiting.length;
       party.hidden = false;
-      again.hidden = waiting.length > 0;    // nothing left to answer: offer the way out
+      again.hidden = waiting.length > 0;   
       send.hidden = !waiting.length;
       busy(send, false);
 
@@ -245,8 +219,7 @@
       return li;
     }
 
-    /** Swap a recorded guest's control for the reply itself, so a second
-     *  pass shows what is already in and what is still owed. */
+    
     function markDone(i, person, attending){
       var wrap = list.querySelector('[data-guest="' + i + '"]');
       if (!wrap) return;
@@ -262,7 +235,6 @@
       current.done[person] = true;
     }
 
-    /* ── back to the search, for another invitation ── */
     function reset(){
       current = null;
       party.hidden = true;
@@ -277,7 +249,6 @@
 
     again.addEventListener('click', reset);
 
-    /* ── send it ── */
     send.addEventListener('click', function(){
       if (!current) return;
 
@@ -285,7 +256,7 @@
       var replies = [];
 
       members.forEach(function(person, i){
-        if (current.done[person]) return;                    // already recorded
+        if (current.done[person]) return;                   
         var picked = list.querySelector('input[name="guest-' + i + '"]:checked');
         if (picked) replies.push({ index: i, name: person, attending: picked.value === 'yes' });
       });
@@ -298,8 +269,7 @@
       busy(send, true, 'Sending');
       say('');
 
-      // text/plain keeps this a simple request. Apps Script cannot answer
-      // the CORS preflight that application/json would trigger
+      
       fetch(RSVP_ENDPOINT, {
         method: 'POST',
         headers: { 'Content-Type': 'text/plain;charset=utf-8' },
@@ -311,8 +281,7 @@
       })
         .then(function(r){ return r.json(); })
         .then(function(res){
-          // The script refuses a name it already holds, so a page left open
-          // since someone else answered cannot write a second row.
+     
           if (res && res.already){
             busy(send, false);
             say('That has already been answered. Search again to see what is recorded.', 'bad');
@@ -348,22 +317,7 @@
     });
   })();
 
-  /* ─────────────────────────────────────────────────────────
-     GUESTS SENDING THEIR OWN PHOTOS
-
-     A guest is standing in a forest holding a 200 MB video on whatever
-     signal reaches Antipolo. Two things follow from that.
-
-     First, the bytes go straight from the phone to Google, never through
-     the script: the script only opens an upload session and hands back the
-     URL. So there is no ceiling on size, and a chunk that fails can be
-     retried on its own instead of restarting the file.
-
-     Second, everything is sequential and visible. One file at a time, a
-     thread filling under each, and a failure says so rather than leaving
-     someone to wonder — the worst outcome here is a guest who believes
-     their photos are safely sent when they are not.
-     ───────────────────────────────────────────────────────── */
+ 
   (function share(){
     var box    = document.getElementById('share');
     var nameEl = document.getElementById('share-name');
@@ -374,29 +328,23 @@
     var send   = document.getElementById('share-send');
     var again  = document.getElementById('share-again');
 
-    if (!box || !RSVP_ENDPOINT) return;   // nothing to upload to
+    if (!box || !RSVP_ENDPOINT) return;   
     box.hidden = false;
 
-    var CHUNK = 4 * 1024 * 1024;          // per PUT, so a retry is cheap
-    var CHUNK_TRIES = 3;                  // forest signal drops; one drop is not a failure
-    var FALLBACK_MAX = 18 * 1024 * 1024;  // matches the script's own ceiling
+    var CHUNK = 4 * 1024 * 1024;         
+    var CHUNK_TRIES = 3;                  
+    var FALLBACK_MAX = 18 * 1024 * 1024; 
     var picked = [];
     var sending = false;
-    var stopped = false;       // the guest asked for it to stop
-    var inFlight = null;       // the chunk currently on the wire
+    var stopped = false;      
+    var inFlight = null;       
 
-    /* Once the direct route has been refused, it will be refused again for
-       every other file in the batch. Finding that out costs a round trip to
-       Apps Script each time, which is exactly the waiting the guest notices,
-       so the answer is remembered for the rest of the visit. */
+    
     var directWorks = true;
-    var directKnown = false;   // nothing has been tried yet this visit
-    var roomLeft = -1;         // bytes Drive can still hold; -1 while unknown
+    var directKnown = false;   
+    var roomLeft = -1;         
 
-    /** Ask the script, once, whether Google will open an upload session at
-     *  all. Only worth a round trip when someone has actually picked a file
-     *  too large for the slow route, because that answer decides whether to
-     *  let them wait on it or tell them now. */
+
     function checkRoute(){
       if (directKnown) return Promise.resolve(directWorks);
 
@@ -410,7 +358,7 @@
         origin: window.location.origin
       }, 12000)
       .then(function(res){
-        directWorks = !!(res && res.ok && res.session);   // nothing is ever sent to it
+        directWorks = !!(res && res.ok && res.session);   
         directKnown = true;
         if (res && typeof res.free === 'number') roomLeft = res.free;
         return directWorks;
@@ -422,8 +370,7 @@
       });
     }
 
-    /* Where a guest can put a video this page cannot carry. Asked for only
-       when that actually happens, so an ordinary visit never pays for it. */
+  
     var bigFiles = null;
 
     function dropOff(){
@@ -438,9 +385,7 @@
         .catch(function(){ bigFiles = ''; return ''; });
     }
 
-    /** The closing line, with a real place to go when one is configured.
-     *  Built as a link rather than pasted as text, because a guest holding a
-     *  phone is not going to retype a Drive URL. */
+  
     function sayWithDropOff(before, linkText, plainText, after, tone){
       dropOff().then(function(url){
         if (!url){
@@ -480,7 +425,6 @@
         : (Math.round((bytes / 1048576) * 10) / 10) + ' MB';
     }
 
-    /* ── the list ── */
     function rowFor(entry, i){
       var li = document.createElement('li');
       li.className = 'share-item';
@@ -504,8 +448,8 @@
       drop.textContent = '×';
       drop.setAttribute('aria-label', 'Remove ' + entry.file.name);
       drop.addEventListener('click', function(){
-        if (entry.sending) return;              // this one is already on its way
-        var at = picked.indexOf(entry);         // not i: the list may have shifted
+        if (entry.sending) return;              
+        var at = picked.indexOf(entry);        
         if (at === -1) return;
         picked.splice(at, 1);
         redraw();
@@ -519,10 +463,7 @@
       return li;
     }
 
-    /** Add only the rows that are not on screen yet. Rebuilding the whole
-     *  list would reset the bar and the percentage of a file in flight, and
-     *  a guest watching 54 per cent drop to nothing has every reason to
-     *  think something broke. */
+   
     function draw(){
       for (var i = list.children.length; i < picked.length; i++){
         list.appendChild(rowFor(picked[i], i));
@@ -530,7 +471,6 @@
       send.hidden = !picked.length;
     }
 
-    /** Only when nothing is in flight, so indices can safely be renumbered. */
     function redraw(){
       list.textContent = '';
       draw();
@@ -543,8 +483,6 @@
       var fill = li.querySelector('.share-bar span');
       if (fill) fill.style.width = Math.round(fraction * 100) + '%';
 
-      // A bar alone on a long upload reads as stuck. A number does not.
-      // Once a row has its verdict, the percentage must not write over it.
       var s = li.querySelector('.share-s');
       if (s && !li.classList.contains('is-done') && !li.classList.contains('is-failed')){
         s.textContent = Math.round(fraction * 100) + '%';
@@ -575,10 +513,7 @@
 
       var anyBig = picked.some(function(p){ return !p.done && p.file.size > FALLBACK_MAX; });
 
-      // Worth one question to the script when something heavy is in the batch:
-      // it settles both whether the fast route is open and how much room is
-      // left, which together are the only real ceiling. An ordinary handful of
-      // photos asks nothing.
+  
       if (anyBig && !directKnown){
         say('Checking whether these can be sent…');
         checkRoute().then(finishPick);
@@ -590,7 +525,6 @@
 
     function finishPick(){
       if (sending){
-        // The running queue will reach them on its own.
         say('Added. They will go after the ones already on their way.');
         return;
       }
@@ -598,10 +532,7 @@
       finishPickIdle();
     }
 
-    /** Nothing is turned away for being long any more — the script sorts a
-     *  long video into its own folder. Only two things can actually stop a
-     *  file: the slow route's own ceiling when the fast one is shut, and a
-     *  Drive with no room left. */
+  
     function ceiling(){
       var limits = [];
       if (!directWorks) limits.push(FALLBACK_MAX);
@@ -633,7 +564,7 @@
         + ', ' + mb(total) + ' in all. ';
       var anyLeft = picked.some(function(p){ return !p.done && !p.hopeless; });
       var closing = !anyLeft
-        ? ''                                   // nothing is going anywhere
+        ? ''                                   
         : heavy.length
           ? 'A long video takes many minutes on phone signal, so keep this page open. If it is easier, send it later on wifi.'
           : 'Keep this page open while they go.';
@@ -658,9 +589,7 @@
       }
     }
 
-    /** Apps Script is not fast, and a request to it can also simply hang.
-     *  Either way the guest should be moved on to the route that works
-     *  rather than left watching a spinner. */
+ 
     function ask(payload, ms){
       return new Promise(function(resolve, reject){
         var settled = false;
@@ -685,7 +614,6 @@
       });
     }
 
-    /* ── one file, streamed to Drive in chunks ── */
     function putDirect(entry, i){
       return ask({
         action: 'upload-init',
@@ -693,8 +621,7 @@
         name: entry.file.name,
         type: entry.file.type || 'application/octet-stream',
         size: entry.file.size,
-        // Google decides whether the phone may PUT to the session from this
-        // page, and it decides from the origin on the call that opens it.
+  
         origin: window.location.origin
       })
       .then(function(res){
@@ -702,8 +629,7 @@
           throw new Error('init: ' + ((res && res.error) || 'no session'));
         }
         return putChunks(res.session, entry, i).then(function(){
-          // The log is a convenience, never a reason to keep the guest
-          // waiting and never a reason to call a sent file failed.
+          
           ask({
             action: 'upload-done',
             from: nameEl.value.trim(),
@@ -718,9 +644,7 @@
     function putChunks(session, entry, i){
       var total = entry.file.size;
 
-      /** One chunk, with its own retries. Nothing here advances the offset:
-       *  a retry that also retried the rest of the file would multiply
-       *  attempts and re-send bytes Google already has. */
+    
       function sendChunk(start, end, tries){
         inFlight = ('AbortController' in window) ? new AbortController() : null;
 
@@ -734,21 +658,17 @@
         })
         .catch(function(){
           if (stopped) throw new Error('stopped');
-          // A blocked cross-origin request reaches JavaScript as nothing at
-          // all, so a CORS refusal and a dropped signal land here alike.
-          // They are told apart by whether a retry ever gets through.
+        
           throw new Error('chunk: blocked or offline');
         })
         .then(function(r){
-          // 308 means Google has the chunk and wants the next one.
           if (r.status === 200 || r.status === 201 || r.status === 308) return r.status;
           throw new Error('chunk: ' + r.status);
         })
         .catch(function(err){
           if (stopped || String(err && err.message) === 'stopped') throw new Error('stopped');
 
-          // Half an hour of a guest's upload should not be thrown away
-          // because one 4 MB piece met a dead spot under the trees.
+         
           var n = (tries || 0) + 1;
           if (n >= CHUNK_TRIES) throw err;
 
@@ -772,7 +692,6 @@
       return step(0);
     }
 
-    /* ── the fallback, for small files, when the direct route is shut ── */
     function putThroughScript(entry, i, why){
       if (entry.file.size > FALLBACK_MAX){
         return Promise.reject(new Error('too large'));
@@ -816,10 +735,9 @@
 
       var route = directWorks
         ? putDirect(entry, i).catch(function(err){
-            directWorks = false;         // do not pay for this discovery twice
+            directWorks = false;         
             directKnown = true;
-            // Slower, and capped, but at least the photo arrives. The reason
-            // goes into the sheet rather than in front of the guest.
+           
             return putThroughScript(entry, i, err && err.message);
           })
         : putThroughScript(entry, i, 'direct route already refused this visit');
@@ -839,31 +757,27 @@
           }
 
           var tooBig = why === 'too large';
-          entry.hopeless = tooBig;       // retrying this changes nothing
+          entry.hopeless = tooBig;       
           state(i, tooBig ? 'Too large to send' : 'Did not send', 'is-failed');
           progress(i, 0);
           return false;
         });
     }
 
-    /** After everything on the list is in, the same button has to mean
-     *  something different: there is nothing left to send, so it opens the
-     *  picker for the next batch. Leaving it saying "Send more" while doing
-     *  nothing is what a guest reads as broken. */
+   
     function clearSent(){
       picked = picked.filter(function(p){ return !p.done && !p.hopeless; });
       redraw();
       say('');
     }
 
-    /** What is left that another tap could actually change. A file the script
-     *  will never accept is not one of them. */
+   
     function retryable(){
       return picked.filter(function(p){ return !p.done && !p.hopeless; });
     }
 
     function openPicker(){
-      pick.value = '';     // choosing the same file again still counts as a change
+      pick.value = '';     
       pick.click();
     }
 
@@ -875,9 +789,7 @@
       openPicker();
     }
 
-    /** While a batch is running this button adds to it; the queue is read as
-     *  it stands, so a photo remembered halfway through goes with the rest.
-     *  Idle, it clears the finished list and starts a new batch. */
+
     again.addEventListener('click', function(){
       if (sending) openPicker();
       else startPicking();
@@ -909,8 +821,7 @@
       stopped = false;
       send.textContent = 'Stop sending';
 
-      // The picker sits above the list, off screen by now. Without this there
-      // is no way to add another photo without stopping the batch first.
+    
       again.textContent = 'Add more photos';
       again.hidden = false;
 
@@ -919,9 +830,7 @@
       var sent = 0, failed = 0;
       picked.forEach(function(p){ p.tried = false; });
 
-      /* Read one at a time from the list as it stands, not from a copy taken
-         when Send was tapped. A guest who remembers another photo halfway
-         through should be able to add it and have it go with the rest. */
+     
       function next(){
         var entry = null, i = -1;
         for (var k = 0; k < picked.length; k++){
@@ -962,10 +871,7 @@
         var left = retryable().length;
         var tooBig = picked.filter(function(p){ return p.hopeless; }).length;
 
-        // Two controls only while they mean two different things. With
-        // nothing left to retry, the button below the list already clears
-        // the batch and opens the picker, so a second one saying the same
-        // is just something else to read.
+       
         again.hidden = !left;
         send.textContent = left ? 'Try the rest again' : 'Send more photos';
 
@@ -998,7 +904,6 @@
     });
   })();
 
-  /* ── music ─────────────────────────────────────────────── */
   var LEVEL = 0.55;
   var scoreBroken = false;
   var fadeTimer = null;
@@ -1006,7 +911,6 @@
   function showToggle(){ if (!scoreBroken) toggle.hidden = false; }
   function breakScore(){ scoreBroken = true; toggle.hidden = true; }
 
-  // iOS never fires canplay before a user gesture, so don't gate the control on it
   score.addEventListener('loadedmetadata', showToggle);
   score.addEventListener('canplay', showToggle);
   score.addEventListener('error', breakScore);
@@ -1037,7 +941,6 @@
       attempt.then(function(){
         showToggle(); setPlaying(true);
       }).catch(function(){
-        // autoplay refused — leave the control ready for a deliberate tap
         clearInterval(fadeTimer);
         score.volume = LEVEL;
         showToggle(); setPlaying(false);
@@ -1047,9 +950,7 @@
     }
   }
 
-  // Playback has to begin inside the tap that opened the envelope — that
-  // gesture is what browsers grant permission on. So it starts silent, and
-  // the volume only comes up once the invitation itself is on screen.
+  
   function startScore(){ play(true); }
 
   toggle.addEventListener('click', function(){
@@ -1062,7 +963,6 @@
     }
   });
 
-  // pausing the tab shouldn't leave music running behind them
   document.addEventListener('visibilitychange', function(){
     if (document.hidden && !score.paused){
       score.pause();
@@ -1070,16 +970,11 @@
     }
   });
 
-  /* ── opening the envelope ──────────────────────────────── */
-
-  // Card finishes rising at ~1.5s and is held still so it can be read.
-  // Then it expands until it IS the page — the envelope is what the
-  // invitation comes out of, so the card has to carry the handover rather
-  // than the two cross-fading past each other.
-  var RISEN = 1500;       // card is clear of the envelope by here
-  var HOLD = 3400;        // card readable until here
-  var ZOOM = 1250;        // card grows to fill the screen
-  var HOLD_CALM = 1600;   // no motion: just time enough to read it
+ 
+  var RISEN = 1500;       
+  var HOLD = 3400;      
+  var ZOOM = 1250;        
+  var HOLD_CALM = 1600;   
 
   var card     = document.querySelector('.env-card');
   var envelope = document.querySelector('.envelope');
@@ -1088,10 +983,7 @@
   var opened = false;
   var handoff = null;
 
-  // The card grows into the page by animating its BOX, not by scaling.
-  // Scaling a landscape card until it covers a portrait screen means a 5x
-  // blow-up and a shape that never matches the page — it stops reading as
-  // the same piece of paper. Widening and lengthening the sheet does.
+  
   function zoomCard(){
     if (!overture.isConnected || calm) return enterSuite();
     window.clearTimeout(handoff);
@@ -1099,14 +991,10 @@
     var EASE = 'cubic-bezier(.4, 0, .2, 1)';
     var here = card.getBoundingClientRect();
 
-    // The envelope sets perspective, and gets a transform on the way out.
-    // Both make it the containing block for position:fixed descendants, so
-    // a card left inside it would size against the ENVELOPE and stop at
-    // ~300px instead of covering the screen. Lift it out first.
+   
     overture.appendChild(card);
 
-    // pin it exactly where it appears, in viewport coordinates, with the
-    // rise folded into left/top so no transform is left to fight
+  
     card.style.transition = 'none';
     card.style.transform  = 'none';
     card.style.position   = 'fixed';
@@ -1118,7 +1006,7 @@
     card.style.width  = here.width  + 'px';
     card.style.height = here.height + 'px';
 
-    void card.offsetWidth;   // commit that state before animating away from it
+    void card.offsetWidth;   
 
     overture.classList.add('is-zooming');
 
@@ -1132,15 +1020,12 @@
       'box-shadow .5s ease'
     ].join(', ');
 
-    // Land on the sheet the invitation is actually printed on, not the whole
-    // window. On a wide screen the page is a column of paper on a deeper
-    // ground, so a card that grew edge to edge arrived as the wrong object.
-    // The leaf fills the width on a phone, so this is right at both ends.
+  
     var sheet = leaf ? leaf.getBoundingClientRect() : null;
 
     card.style.background  = 'var(--paper)';
     card.style.borderColor = 'transparent';
-    card.style.boxShadow   = '0 0 70px -34px rgba(17,17,16,.30)';   // matches .leaf
+    card.style.boxShadow   = '0 0 70px -34px rgba(17,17,16,.30)';   
     card.style.left   = (sheet ? sheet.left  : 0) + 'px';
     card.style.top    = '0px';
     card.style.width  = (sheet ? sheet.width : window.innerWidth) + 'px';
@@ -1153,13 +1038,13 @@
     if (suite.classList.contains('is-lit')) return;
     window.clearTimeout(handoff);
 
-    window.scrollTo(0, 0);                                    // open at the top
-    document.documentElement.classList.remove('is-sealed');   // scrolling back on
+    window.scrollTo(0, 0);                                   
+    document.documentElement.classList.remove('is-sealed');   
 
     suite.removeAttribute('aria-hidden');
     suite.classList.add('is-lit');
     reveal();
-    if (!score.paused && score.volume < 0.02) fadeUp();   // skipped ahead
+    if (!score.paused && score.volume < 0.02) fadeUp();   
 
     window.setTimeout(function(){
       if (overture.isConnected) overture.remove();
@@ -1173,9 +1058,7 @@
     }
   }
 
-  /* A guest scanning the QR code at the reception wants the upload form, not
-     a ceremony they are already sitting in. The envelope is the first-time
-     arrival; a link that names a section skips straight to it. */
+
   (function skipToSection(){
     var wanted = (window.location.hash || '').replace('#', '');
     if (!wanted || !document.getElementById(wanted)) return;
@@ -1192,16 +1075,13 @@
     overture.classList.add('is-open');
     startScore();
 
-    // The music comes up with the paper, not over the sealed envelope and
-    // not held back until the page. Playback already began, silently, inside
-    // the tap — this is only the volume arriving.
+   
     window.setTimeout(function(){
       if (!score.paused) fadeUp();
     }, calm ? 0 : RISEN);
 
     handoff = window.setTimeout(zoomCard, calm ? HOLD_CALM : HOLD);
 
-    // let an impatient second tap skip the rest of the sequence
     window.setTimeout(function(){
       overture.addEventListener('click', enterSuite, { once: true });
     }, 600);
@@ -1210,7 +1090,6 @@
   document.getElementById('unseal').addEventListener('click', unseal);
   document.getElementById('unseal-cue').addEventListener('click', unseal);
 
-  /* ── scroll reveals (applied only once JS is running) ──── */
   function reveal(){
     var items = Array.prototype.slice.call(document.querySelectorAll('.js-reveal'));
     if (calm || !('IntersectionObserver' in window)) return;
