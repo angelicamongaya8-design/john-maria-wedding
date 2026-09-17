@@ -35,6 +35,18 @@ var UPLOAD_FOLDER_NAME = 'John + Maria · Guest photos and videos';
  *  behind a link that goes around a wedding. */
 var BIG_FILES_KEY = 'bigfiles';
 
+/** The largest single file a guest may send, in MB.
+ *
+ *  Not a technical limit: once the fast route is open Google will take a file
+ *  of any size. This is the couple's own house rule, and it belongs to them,
+ *  so it lives in the `Settings` tab under the key `maxfile` — a cell, not a
+ *  redeploy. Leave it empty and DEFAULT_MAX_MB applies.
+ *
+ *  Roughly, from a phone: 1080p video runs about 60 MB a minute, 4K about
+ *  three times that. So 100 MB is a minute or two, 500 MB is eight or ten. */
+var MAX_FILE_KEY   = 'maxfile';
+var DEFAULT_MAX_MB = 100;
+
 /** The ceiling on the fallback path only. The ordinary path streams straight
  *  to Drive from the guest's phone and has no practical limit; this is the
  *  size below which a file can also survive the detour through Apps Script,
@@ -341,6 +353,19 @@ function freeSpace() {
   }
 }
 
+/** The house rule, read from the sheet. Accepts "100", "100 MB" or "1.5 GB". */
+function maxFileBytes() {
+  var raw = String(settingValue(MAX_FILE_KEY) || '').trim();
+  var match = raw.match(/([\d.]+)\s*(gb|mb)?/i);
+
+  var mb = DEFAULT_MAX_MB;
+  if (match) {
+    var n = parseFloat(match[1]);
+    if (n > 0) mb = /gb/i.test(match[2] || '') ? n * 1024 : n;
+  }
+  return Math.round(mb * 1024 * 1024);
+}
+
 function uploadInit(body) {
   try {
     var size = Number(body.size) || 0;
@@ -385,7 +410,10 @@ function uploadInit(body) {
     var session = sent.Location || sent.location || '';
     if (!session) return json({ ok: false, error: 'no session url' });
 
-    return json({ ok: true, session: session, name: name, free: freeSpace() });
+    return json({
+      ok: true, session: session, name: name,
+      free: freeSpace(), maxFile: maxFileBytes()
+    });
 
   } catch (err) {
     return json({ ok: false, error: String(err) });
@@ -399,8 +427,8 @@ function uploadBlob(body) {
     if (!data) return json({ ok: false, error: 'no data' });
 
     var bytes = Utilities.base64Decode(data);
-    if (bytes.length > FALLBACK_MAX) {
-      return json({ ok: false, error: 'too large for the fallback route' });
+    if (bytes.length > Math.min(FALLBACK_MAX, maxFileBytes())) {
+      return json({ ok: false, error: 'too large' });
     }
 
     var name = uploadName(body.from, body.name);
@@ -503,6 +531,7 @@ function authorise() {
     if (answer.ok && answer.session) {
       var left = freeSpace();
       report.push('Fast route  OK, Google opened an upload session');
+      report.push('Max file    ' + Math.round(maxFileBytes() / 1048576) + ' MB per file');
       report.push('Room left   ' + (left < 0
         ? 'unknown'
         : (Math.round((left / 1073741824) * 100) / 100) + ' GB in this Drive'));

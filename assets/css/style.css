@@ -488,10 +488,21 @@ section.tight{ gap:1.1rem; }
   display:grid; gap:.55rem;
 }
 .share-item{
-  display:grid; grid-template-columns:1fr auto; gap:.6rem; align-items:baseline;
+  display:grid; grid-template-columns:1fr auto auto; gap:.6rem; align-items:baseline;
   border-bottom:1px solid var(--hair);
   padding-bottom:.5rem;
 }
+.share-x{
+  font-family: var(--util); font-weight:300; font-size:1.05rem; line-height:1;
+  color: var(--ink-faint);
+  background:none; border:0; padding:.1rem .25rem; margin:0;
+  cursor:pointer;
+  transition: color .25s ease;
+}
+.share-x:hover{ color: var(--ink); }
+.share-x:focus-visible{ outline:2px solid var(--ink); outline-offset:2px; }
+.share-item.is-done .share-x,
+.share-item.is-failed .share-x{ visibility:hidden; }
 .share-f{
   font-family: var(--display); font-size:.9375rem; color: var(--ink);
   overflow:hidden; text-overflow:ellipsis; white-space:nowrap;

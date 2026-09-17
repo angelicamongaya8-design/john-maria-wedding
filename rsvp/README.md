@@ -249,21 +249,38 @@ couple instead.
 lets them delete the ones already there, and the collection everyone's photos
 land in should not be sitting behind a link that travels around a wedding.
 
-### Storage, which is also the size limit
+### How large a file a guest may send
+
+Set it in the `Settings` tab under `maxfile`. A number, with or without a
+unit: `100`, `100 MB`, `1.5 GB`. Leave it empty and 100 MB applies.
+
+Roughly, from a phone: 1080p video is about 60 MB a minute, 4K about three
+times that.
+
+| `maxfile` | About |
+|---|---|
+| 100 MB | a minute or two of video, every photo |
+| 250 MB | four or five minutes |
+| 500 MB | eight or ten minutes |
+
+A file over the limit is refused the moment it is picked, and the page names
+the figure rather than just saying no. Change the cell and the next guest gets
+the new rule; there is nothing to redeploy.
+
+`authorise` prints what is currently in force:
+
+```
+Max file    100 MB per file
+Room left   11.4 GB in this Drive
+```
+
+### Storage
 
 Uploads land in the script owner's Drive and count against that account's quota
 (15 GB on a free Google account, shared with Gmail and Photos).
 
-That quota IS the ceiling. Once the fast route is open Google will take a file
-of any size, so the page asks the script how much room is left and refuses
-anything larger at the moment it is picked, naming the figure. Nobody watches a
-gigabyte climb to 98 per cent and then finds out.
-
-`authorise` prints the same number, so it can be checked at any time:
-
-```
-Room left   11.4 GB in this Drive
-```
+Running out of room stops an upload as surely as the size limit does, so the
+page checks that too and says which one applied.
 
 A wedding's worth of guest video will still exceed 15 GB. Watch it on the day,
 and either clear space or move the collection to an account with room.

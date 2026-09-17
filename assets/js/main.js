@@ -352,6 +352,8 @@
     var FALLBACK_MAX = 18 * 1024 * 1024;  // matches the script's own ceiling
     var picked = [];
     var sending = false;
+    var stopped = false;       // the guest asked for it to stop
+    var inFlight = null;       // the chunk currently on the wire
 
     /* Once the direct route has been refused, it will be refused again for
        every other file in the batch. Finding that out costs a round trip to
@@ -360,6 +362,7 @@
     var directWorks = true;
     var directKnown = false;   // nothing has been tried yet this visit
     var roomLeft = -1;         // bytes Drive can still hold; -1 while unknown
+    var maxFile  = 100 * 1048576;   // the couple's house rule, until the script says otherwise
 
     /** Ask the script, once, whether Google will open an upload session at
      *  all. Only worth a round trip when someone has actually picked a file
@@ -380,6 +383,7 @@
         directWorks = !!(res && res.ok && res.session);   // nothing is ever sent to it
         directKnown = true;
         if (res && typeof res.free === 'number') roomLeft = res.free;
+        if (res && typeof res.maxFile === 'number' && res.maxFile > 0) maxFile = res.maxFile;
         return directWorks;
       })
       .catch(function(){
@@ -408,10 +412,10 @@
     /** The closing line, with a real place to go when one is configured.
      *  Built as a link rather than pasted as text, because a guest holding a
      *  phone is not going to retype a Drive URL. */
-    function sayWithDropOff(before, after, tone){
+    function sayWithDropOff(before, linkText, plainText, after, tone){
       dropOff().then(function(url){
         if (!url){
-          say(before + 'kindly send those to us directly. ' + after, tone);
+          say(before + plainText + '. ' + after, tone);
           return;
         }
 
@@ -423,7 +427,7 @@
         a.href = url;
         a.target = '_blank';
         a.rel = 'noopener noreferrer';
-        a.textContent = 'drop them here instead';
+        a.textContent = linkText;
         msg.appendChild(a);
 
         msg.appendChild(document.createTextNode('. ' + after));
@@ -468,8 +472,21 @@
         bar.className = 'share-bar';
         bar.appendChild(document.createElement('span'));
 
+        var drop = document.createElement('button');
+        drop.type = 'button';
+        drop.className = 'share-x';
+        drop.textContent = '×';
+        drop.setAttribute('aria-label', 'Remove ' + entry.file.name);
+        drop.addEventListener('click', function(){
+          if (sending) return;                  // stop the batch first
+          picked.splice(i, 1);
+          draw();
+          say(picked.length ? '' : 'Nothing chosen.');
+        });
+
         li.appendChild(f);
         li.appendChild(s);
+        li.appendChild(drop);
         li.appendChild(bar);
         list.appendChild(li);
       });
@@ -514,7 +531,9 @@
 
       draw();
 
-      var anyBig = picked.some(function(p){ return !p.done && p.file.size > FALLBACK_MAX; });
+      var anyBig = picked.some(function(p){
+        return !p.done && p.file.size > Math.min(FALLBACK_MAX, maxFile);
+      });
 
       // Worth one question to the script when something heavy is in the batch:
       // it settles both whether the fast route is open and how much room is
@@ -529,24 +548,34 @@
       finishPick();
     });
 
-    /** Once the fast route is open Google will take a file of any size, but
-     *  only while the Drive it lands in has room. That, not an invented
-     *  number, is the ceiling — and a guest should meet it when they pick the
-     *  file, not at 98 per cent of a gigabyte. */
+    /** Three things can stop a file, and the guest should meet whichever one
+     *  applies at the moment they pick it, not at 98 per cent of a gigabyte:
+     *  the couple's own per-file rule, what the slow route can carry when the
+     *  fast one is shut, and whether the Drive still has room. */
     function ceiling(){
-      if (!directWorks) return FALLBACK_MAX;
-      return roomLeft >= 0 ? roomLeft : Infinity;
+      var limits = [maxFile];
+      if (!directWorks) limits.push(FALLBACK_MAX);
+      if (roomLeft >= 0) limits.push(roomLeft);
+      return Math.min.apply(null, limits);
+    }
+
+    function whyRefused(size){
+      if (size > maxFile) return 'over';
+      if (!directWorks && size > FALLBACK_MAX) return 'route';
+      return 'room';
     }
 
     function finishPick(){
       var cap = ceiling();
       var overCap = 0;
+      var reason = '';
 
       picked.forEach(function(p, i){
         if (p.done || p.file.size <= cap) return;
         p.hopeless = true;
         overCap++;
-        state(i, directWorks ? 'No room left for this' : 'Too large to send', 'is-failed');
+        reason = whyRefused(p.file.size);
+        state(i, reason === 'room' ? 'No room left for this' : 'Too large to send', 'is-failed');
       });
 
       var heavy = picked.filter(function(p){ return !p.hopeless && p.file.size > 200 * 1048576; });
@@ -568,13 +597,24 @@
 
       var many = overCap === 1 ? 'One is' : overCap + ' are';
 
-      if (directWorks){
-        // Not the page's limit but the Drive's, so say which, and how much.
-        say(opening + many + ' larger than the '
-          + mb(roomLeft) + ' of space left, so kindly send '
-          + (overCap === 1 ? 'it' : 'those') + ' to us directly. ' + closing, 'bad');
+      var them = overCap === 1 ? 'it' : 'those';
+
+      if (reason === 'over'){
+        // The couple's own rule, so name the number rather than just refusing.
+        sayWithDropOff(
+          opening + 'We can take up to ' + mb(maxFile) + ' a file, and '
+            + (overCap === 1 ? 'one is larger' : many.toLowerCase() + ' larger') + '. Kindly ',
+          overCap === 1 ? 'drop it here instead' : 'drop those here instead',
+          overCap === 1 ? 'send it to us directly' : 'send those to us directly',
+          closing, 'bad');
+      } else if (reason === 'room'){
+        say(opening + many + ' larger than the ' + mb(roomLeft)
+          + ' of space left, so kindly send ' + them + ' to us directly. ' + closing, 'bad');
       } else {
-        sayWithDropOff(opening + many + ' longer than this page can carry, so ', closing);
+        sayWithDropOff(opening + many + ' longer than this page can carry, so kindly ',
+          overCap === 1 ? 'drop it here instead' : 'drop those here instead',
+          overCap === 1 ? 'send it to us directly' : 'send those to us directly',
+          closing, 'bad');
       }
     }
 
@@ -641,14 +681,18 @@
        *  a retry that also retried the rest of the file would multiply
        *  attempts and re-send bytes Google already has. */
       function sendChunk(start, end, tries){
+        inFlight = ('AbortController' in window) ? new AbortController() : null;
+
         return fetch(session, {
           method: 'PUT',
           headers: {
             'Content-Range': 'bytes ' + start + '-' + (end - 1) + '/' + total
           },
-          body: entry.file.slice(start, end)
+          body: entry.file.slice(start, end),
+          signal: inFlight ? inFlight.signal : undefined
         })
         .catch(function(){
+          if (stopped) throw new Error('stopped');
           // A blocked cross-origin request reaches JavaScript as nothing at
           // all, so a CORS refusal and a dropped signal land here alike.
           // They are told apart by whether a retry ever gets through.
@@ -660,6 +704,8 @@
           throw new Error('chunk: ' + r.status);
         })
         .catch(function(err){
+          if (stopped || String(err && err.message) === 'stopped') throw new Error('stopped');
+
           // Half an hour of a guest's upload should not be thrown away
           // because one 4 MB piece met a dead spot under the trees.
           var n = (tries || 0) + 1;
@@ -672,6 +718,7 @@
       }
 
       function step(start){
+        if (stopped) return Promise.reject(new Error('stopped'));
         if (start >= total) return Promise.resolve();
 
         var end = Math.min(start + CHUNK, total);
@@ -743,7 +790,14 @@
           return true;
         })
         .catch(function(err){
-          var tooBig = String(err && err.message) === 'too large';
+          var why = String(err && err.message);
+          if (why === 'stopped' || stopped){
+            state(i, 'Stopped', 'is-failed');
+            progress(i, 0);
+            return false;
+          }
+
+          var tooBig = why === 'too large';
           entry.hopeless = tooBig;       // retrying this changes nothing
           state(i, tooBig ? 'Too large to send' : 'Did not send', 'is-failed');
           progress(i, 0);
@@ -778,8 +832,16 @@
 
     again.addEventListener('click', startPicking);
 
+    function stopSending(){
+      stopped = true;
+      send.disabled = true;
+      send.textContent = 'Stopping';
+      try { if (inFlight) inFlight.abort(); } catch (ignored) {}
+      say('Stopping after the piece that is on its way.');
+    }
+
     send.addEventListener('click', function(){
-      if (sending) return;
+      if (sending){ stopSending(); return; }
 
       if (!retryable().length){
         startPicking();
@@ -793,8 +855,9 @@
       }
 
       sending = true;
-      send.disabled = true;
-      send.textContent = 'Sending';
+      stopped = false;
+      send.textContent = 'Stop sending';
+      again.hidden = true;
       say('Please keep this page open until it says they are through.');
 
       var sent = 0, failed = 0;
@@ -811,6 +874,17 @@
       run.then(function(){
         sending = false;
         send.disabled = false;
+        inFlight = null;
+
+        if (stopped){
+          again.hidden = false;
+          send.textContent = 'Send them';
+          say(sent
+            ? 'Stopped. ' + sent + (sent === 1 ? ' had already been sent.' : ' had already been sent.')
+            : 'Stopped. Nothing was sent.');
+          stopped = false;
+          return;
+        }
 
         var left = retryable().length;
         var tooBig = picked.filter(function(p){ return p.hopeless; }).length;
@@ -837,7 +911,9 @@
 
         if (tooBig){
           sayWithDropOff(
-            lines.join(', ') + '. A long video is beyond what this page can carry, so ',
+            lines.join(', ') + '. A long video is beyond what we can take here, so kindly ',
+            tooBig === 1 ? 'drop it here instead' : 'drop those here instead',
+            tooBig === 1 ? 'send it to us directly' : 'send those to us directly',
             closing, 'bad');
         } else {
           say(lines.join(', ') + '. ' + closing, 'bad');
