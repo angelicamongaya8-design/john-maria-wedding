@@ -358,6 +358,34 @@
        Apps Script each time, which is exactly the waiting the guest notices,
        so the answer is remembered for the rest of the visit. */
     var directWorks = true;
+    var directKnown = false;   // nothing has been tried yet this visit
+
+    /** Ask the script, once, whether Google will open an upload session at
+     *  all. Only worth a round trip when someone has actually picked a file
+     *  too large for the slow route, because that answer decides whether to
+     *  let them wait on it or tell them now. */
+    function checkRoute(){
+      if (directKnown) return Promise.resolve(directWorks);
+
+      return ask({
+        action: 'upload-init',
+        from: '',
+        name: 'route check',
+        type: 'text/plain',
+        size: 1,
+        origin: window.location.origin
+      }, 12000)
+      .then(function(res){
+        directWorks = !!(res && res.ok && res.session);   // nothing is ever sent to it
+        directKnown = true;
+        return directWorks;
+      })
+      .catch(function(){
+        directWorks = false;
+        directKnown = true;
+        return false;
+      });
+    }
 
     /* Where a guest can put a video this page cannot carry. Asked for only
        when that actually happens, so an ordinary visit never pays for it. */
@@ -484,8 +512,21 @@
 
       draw();
 
-      // Once the slow route is the only one left, a file over its ceiling can
-      // be called before anyone waits on it rather than after.
+      var anyBig = picked.some(function(p){ return !p.done && p.file.size > FALLBACK_MAX; });
+
+      // A file over the slow route's ceiling is only sendable if the fast one
+      // is open. Find that out now, so nobody waits out a 480 MB upload to be
+      // told at the end that it was never going to be accepted.
+      if (anyBig && !directKnown){
+        say('Checking whether these can be sent…');
+        checkRoute().then(finishPick);
+        return;
+      }
+
+      finishPick();
+    });
+
+    function finishPick(){
       var overCap = 0;
       if (!directWorks){
         picked.forEach(function(p, i){
@@ -513,7 +554,7 @@
       } else {
         say(opening + closing);
       }
-    });
+    }
 
     /** Apps Script is not fast, and a request to it can also simply hang.
      *  Either way the guest should be moved on to the route that works
@@ -666,6 +707,7 @@
       var route = directWorks
         ? putDirect(entry, i).catch(function(err){
             directWorks = false;         // do not pay for this discovery twice
+            directKnown = true;
             // Slower, and capped, but at least the photo arrives. The reason
             // goes into the sheet rather than in front of the guest.
             return putThroughScript(entry, i, err && err.message);
