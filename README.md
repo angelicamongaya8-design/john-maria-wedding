@@ -43,8 +43,22 @@ own monogram.
 │   └── audio/
 │       └── score.mp3       background music (see Music below)
 └── tools/
+    ├── stamp-assets.mjs    cache-busts the asset URLs in index.html
     └── build-artifact.mjs  derives the Claude-artifact build
 ```
+
+## After editing anything in assets/
+
+```bash
+node tools/stamp-assets.mjs
+```
+
+GitHub Pages serves assets with a ten-minute cache and browsers hold them
+for much longer. Change `style.css` without changing its URL and returning
+visitors keep running the old file — the edit appears to have done nothing.
+The script rewrites the `?v=` on each asset link to a hash of that file's
+contents, so a changed file always gets a new URL and an unchanged one stays
+cached. `build-artifact.mjs` runs it for you.
 
 ## Running it
 

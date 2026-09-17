@@ -20,6 +20,9 @@ import { fileURLToPath } from 'node:url';
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const out = resolve(root, 'dist/artifact');
 
+// keep the cache-busting stamps current before deriving anything from the page
+await import('./stamp-assets.mjs');
+
 const html = await readFile(resolve(root, 'index.html'), 'utf8');
 
 // keep the <title>, the font <link>s and the stylesheet <link>s out of <head>
