@@ -7,6 +7,13 @@
   var toggle   = document.getElementById('music-toggle');
   var calm     = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
+  // The invitation is in the document the whole time, just hidden behind the
+  // overture — so a browser restoring the last scroll position drops the
+  // reader into the middle of the entourage the moment the envelope opens.
+  try { history.scrollRestoration = 'manual'; } catch (e) {}
+  document.documentElement.classList.add('is-sealed');   // locks scrolling
+  window.scrollTo(0, 0);
+
   /* ── drifting specks ───────────────────────────────────── */
   (function motes(){
     if (calm) return;
@@ -215,6 +222,9 @@
   function enterSuite(){
     if (suite.classList.contains('is-lit')) return;
     window.clearTimeout(handoff);
+
+    window.scrollTo(0, 0);                                    // open at the top
+    document.documentElement.classList.remove('is-sealed');   // scrolling back on
 
     suite.removeAttribute('aria-hidden');
     suite.classList.add('is-lit');

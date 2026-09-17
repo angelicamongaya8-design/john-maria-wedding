@@ -42,6 +42,10 @@ body{
 
 img{ max-width:100%; display:block; }
 
+/* while the envelope is closed the invitation must not be scrollable —
+   otherwise a stray swipe leaves the reader mid-page when it opens */
+html.is-sealed, html.is-sealed body{ overflow:hidden; height:100%; }
+
 /* ── typographic roles ────────────────────────────────────── */
 .display{
   font-family: var(--display);
@@ -374,25 +378,53 @@ section.tight{ gap:1.1rem; }
 /* ── entourage ────────────────────────────────────────────── */
 .roll{
   width:100%;
-  display:grid; gap: clamp(1.9rem, 5vw, 2.6rem);
+  display:grid; gap: clamp(1.5rem, 4vw, 2.2rem);
   grid-template-columns: 1fr;
 }
-.roll.two{ grid-template-columns: repeat(2, minmax(0,1fr)); }
-@media (max-width: 520px){
-  .roll.two{ grid-template-columns: 1fr; }
+
+/* Paired roles stay paired, phone included. The printed invitation sets
+   them side by side, and stacking them turned the entourage into one long
+   undifferentiated column twice the length it needed to be. */
+.roll.two{
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: .9rem;
+  align-items:start;
 }
-.role{ display:grid; gap:.45rem; justify-items:center; }
+@media (min-width: 480px){
+  .roll.two{ gap: clamp(1.4rem, 4vw, 2.2rem); }
+}
+@media (max-width: 359px){
+  .roll.two{ grid-template-columns: 1fr; }   /* only the very narrowest */
+}
+
+.role{ display:grid; gap:.3rem; justify-items:center; }
 .role-t{
   font-family: var(--display); font-style:italic; font-weight:400;
-  font-size:1.1875rem; color: var(--ink);
-  line-height:1.2;
+  /* sized so the longest title, "Parents of the Groom", clears a half
+     column at 390px without crowding the gutter */
+  font-size:1.0625rem; color: var(--ink);
+  line-height:1.25;
+  text-wrap: balance;
 }
-.role-n{ display:grid; gap:.1rem; color: var(--ink-soft); line-height:1.6; }
+.role-n{
+  display:grid; gap:.05rem;
+  color: var(--ink-soft);
+  font-size:.8125rem; line-height:1.45;
+  text-wrap: balance;
+}
+@media (min-width: 480px){
+  .role-t{ font-size:1.125rem; }
+  .role-n{ font-size:.875rem; line-height:1.5; }
+}
+@media (min-width: 620px){
+  .role-t{ font-size:1.1875rem; }
+  .role-n{ font-size: var(--step-0); line-height:1.6; }
+}
 
 .subhead{
   font-family: var(--display); font-style:italic; font-weight:400;
   font-size: var(--step-2); line-height:1.2;
-  margin-block: .5rem 0;
+  margin-block: 1.1rem 0;
 }
 
 /* ── rsvp ─────────────────────────────────────────────────── */
@@ -438,6 +470,10 @@ section.tight{ gap:1.1rem; }
 .music:hover{ color: var(--ink); border-color: var(--ink); }
 .music:focus-visible{ outline:2px solid var(--ink); outline-offset:3px; }
 .music svg{ width:17px; height:17px; }
+@media (max-width: 460px){
+  .music{ width:38px; height:38px; }
+  .music svg{ width:15px; height:15px; }
+}
 .music .bar{ transform-origin: center bottom; }
 .music.is-playing .bar{ animation: eq .9s ease-in-out infinite alternate; }
 .music .bar:nth-child(2){ animation-delay:.16s; }
