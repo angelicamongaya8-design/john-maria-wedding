@@ -316,27 +316,42 @@ function uploadInit(body) {
     var type = String(body.type || 'application/octet-stream');
     var name = uploadName(body.from, body.name);
 
+    var headers = {
+      Authorization: 'Bearer ' + ScriptApp.getOAuthToken(),
+      'X-Upload-Content-Type': type,
+      'X-Upload-Content-Length': String(size)
+    };
+
+    // The phone, not this script, is what will PUT the bytes, and that is a
+    // cross-origin request. Google decides whether to allow it from the
+    // Origin on THIS call, the one that opens the session — so the page
+    // sends its own origin along and it is passed through here. Without it
+    // the browser's preflight is refused and every upload quietly takes the
+    // slow route instead.
+    var origin = String(body.origin || '');
+    if (/^https:\/\/[A-Za-z0-9.-]+(:\d+)?$/.test(origin)) headers.Origin = origin;
+
     var response = UrlFetchApp.fetch(
       'https://www.googleapis.com/upload/drive/v3/files?uploadType=resumable&supportsAllDrives=true',
       {
         method: 'post',
         contentType: 'application/json; charset=UTF-8',
-        headers: {
-          Authorization: 'Bearer ' + ScriptApp.getOAuthToken(),
-          'X-Upload-Content-Type': type,
-          'X-Upload-Content-Length': String(size)
-        },
+        headers: headers,
         payload: JSON.stringify({ name: name, parents: [uploadFolder().getId()] }),
         muteHttpExceptions: true
       });
 
     if (response.getResponseCode() !== 200) {
-      return json({ ok: false, error: 'init ' + response.getResponseCode() });
+      return json({
+        ok: false,
+        error: 'init ' + response.getResponseCode() + ' ' +
+               String(response.getContentText() || '').slice(0, 200)
+      });
     }
 
     // Header capitalisation is not guaranteed, so look for either spelling.
-    var headers = response.getAllHeaders();
-    var session = headers.Location || headers.location || '';
+    var sent = response.getAllHeaders();
+    var session = sent.Location || sent.location || '';
     if (!session) return json({ ok: false, error: 'no session url' });
 
     return json({ ok: true, session: session, name: name });
@@ -361,7 +376,7 @@ function uploadBlob(body) {
     var blob = Utilities.newBlob(bytes, String(body.type || 'application/octet-stream'), name);
     var file = uploadFolder().createFile(blob);
 
-    logUpload(body.from, name, bytes.length, 'fallback');
+    logUpload(body.from, name, bytes.length, 'fallback', body.why);
     return json({ ok: true, id: file.getId(), name: name });
 
   } catch (err) {
@@ -371,7 +386,7 @@ function uploadBlob(body) {
 
 function uploadDone(body) {
   try {
-    logUpload(body.from, body.name, Number(body.size) || 0, 'direct');
+    logUpload(body.from, body.name, Number(body.size) || 0, 'direct', '');
     return json({ ok: true });
   } catch (err) {
     return json({ ok: false, error: String(err) });
@@ -382,14 +397,14 @@ function uploadDone(body) {
  *  and so a guest who asks "did mine go through" has an answer. It must
  *  never be the reason an upload reports failure: the file is already in
  *  Drive by the time this runs. */
-function logUpload(from, name, size, route) {
+function logUpload(from, name, size, route, note) {
   try {
     var book = SpreadsheetApp.getActive();
     var sheet = book.getSheetByName(UPLOAD_SHEET);
 
     if (!sheet) {
       sheet = book.insertSheet(UPLOAD_SHEET);
-      sheet.appendRow(['Uploaded at', 'From', 'File', 'Size (MB)', 'Route']);
+      sheet.appendRow(['Uploaded at', 'From', 'File', 'Size (MB)', 'Route', 'Note']);
       sheet.setFrozenRows(1);
     }
 
@@ -398,7 +413,8 @@ function logUpload(from, name, size, route) {
       String(from || ''),
       String(name || ''),
       Math.round((size / 1048576) * 100) / 100,
-      route
+      route,
+      String(note || '').slice(0, 300)
     ]);
   } catch (ignored) {}
 }

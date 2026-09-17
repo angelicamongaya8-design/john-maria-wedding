@@ -416,9 +416,12 @@
       var chosen = Array.prototype.slice.call(pick.files || []);
       if (!chosen.length) return;
 
+      if (picked.length && picked.every(function(p){ return p.done; })) picked = [];
+
       chosen.forEach(function(file){
         picked.push({ file: file, done: false });
       });
+      send.textContent = 'Send them';
 
       draw();
       say(picked.length === 1
@@ -426,33 +429,57 @@
         : picked.length + ' files ready to send.');
     });
 
+    /** Apps Script is not fast, and a request to it can also simply hang.
+     *  Either way the guest should be moved on to the route that works
+     *  rather than left watching a spinner. */
+    function ask(payload, ms){
+      return new Promise(function(resolve, reject){
+        var settled = false;
+        var timer = window.setTimeout(function(){
+          if (!settled){ settled = true; reject(new Error('timeout')); }
+        }, ms || 20000);
+
+        fetch(RSVP_ENDPOINT, {
+          method: 'POST',
+          headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+          body: JSON.stringify(payload)
+        })
+        .then(function(r){ return r.json(); })
+        .then(function(res){
+          if (settled) return;
+          settled = true; window.clearTimeout(timer); resolve(res);
+        })
+        .catch(function(err){
+          if (settled) return;
+          settled = true; window.clearTimeout(timer); reject(err);
+        });
+      });
+    }
+
     /* ── one file, streamed to Drive in chunks ── */
     function putDirect(entry, i){
-      return fetch(RSVP_ENDPOINT, {
-        method: 'POST',
-        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-        body: JSON.stringify({
-          action: 'upload-init',
-          from: nameEl.value.trim(),
-          name: entry.file.name,
-          type: entry.file.type || 'application/octet-stream',
-          size: entry.file.size
-        })
+      return ask({
+        action: 'upload-init',
+        from: nameEl.value.trim(),
+        name: entry.file.name,
+        type: entry.file.type || 'application/octet-stream',
+        size: entry.file.size,
+        // Google decides whether the phone may PUT to the session from this
+        // page, and it decides from the origin on the call that opens it.
+        origin: window.location.origin
       })
-      .then(function(r){ return r.json(); })
       .then(function(res){
-        if (!res || !res.ok || !res.session) throw new Error('no session');
+        if (!res || !res.ok || !res.session){
+          throw new Error('init: ' + ((res && res.error) || 'no session'));
+        }
         return putChunks(res.session, entry, i).then(function(){
-          // The log is a convenience, never a reason to call a sent file failed.
-          return fetch(RSVP_ENDPOINT, {
-            method: 'POST',
-            headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-            body: JSON.stringify({
-              action: 'upload-done',
-              from: nameEl.value.trim(),
-              name: res.name || entry.file.name,
-              size: entry.file.size
-            })
+          // The log is a convenience, never a reason to keep the guest
+          // waiting and never a reason to call a sent file failed.
+          ask({
+            action: 'upload-done',
+            from: nameEl.value.trim(),
+            name: res.name || entry.file.name,
+            size: entry.file.size
           }).catch(function(){});
         });
       });
@@ -474,13 +501,18 @@
           },
           body: slice
         })
+        .catch(function(){
+          // A blocked cross-origin request reaches JavaScript as nothing at
+          // all, so this is where a CORS refusal actually lands.
+          throw new Error('chunk: blocked or offline');
+        })
         .then(function(r){
           // 308 means Google has the chunk and wants the next one.
           if (r.status === 200 || r.status === 201){
             progress(i, 1);
             return;
           }
-          if (r.status !== 308) throw new Error('chunk ' + r.status);
+          if (r.status !== 308) throw new Error('chunk: ' + r.status);
 
           progress(i, end / total);
           return step(end);
@@ -491,7 +523,7 @@
     }
 
     /* ── the fallback, for small files, when the direct route is shut ── */
-    function putThroughScript(entry, i){
+    function putThroughScript(entry, i, why){
       if (entry.file.size > FALLBACK_MAX){
         return Promise.reject(new Error('too large'));
       }
@@ -516,6 +548,7 @@
             from: nameEl.value.trim(),
             name: entry.file.name,
             type: entry.file.type || 'application/octet-stream',
+            why: String(why || ''),
             data: base64
           })
         });
@@ -532,7 +565,11 @@
       state(i, 'Sending');
 
       return putDirect(entry, i)
-        .catch(function(){ return putThroughScript(entry, i); })
+        .catch(function(err){
+          // Slower, and capped, but at least the photo arrives. The reason
+          // goes into the sheet rather than in front of the guest.
+          return putThroughScript(entry, i, err && err.message);
+        })
         .then(function(){
           entry.done = true;
           state(i, 'Sent', 'is-done');
@@ -548,18 +585,30 @@
         });
     }
 
+    /** After everything on the list is in, the same button has to mean
+     *  something different: there is nothing left to send, so it opens the
+     *  picker for the next batch. Leaving it saying "Send more" while doing
+     *  nothing is what a guest reads as broken. */
+    function clearSent(){
+      picked = picked.filter(function(p){ return !p.done; });
+      draw();
+      say('');
+    }
+
     send.addEventListener('click', function(){
       if (sending) return;
+
+      var waiting = picked.filter(function(p){ return !p.done; });
+      if (!waiting.length){
+        clearSent();
+        pick.value = '';       // the same file again still counts as a change
+        pick.click();
+        return;
+      }
 
       if (!nameEl.value.trim()){
         say('Kindly add your name first, so they know whose photos these are.', 'bad');
         nameEl.focus();
-        return;
-      }
-
-      var waiting = picked.filter(function(p){ return !p.done; });
-      if (!waiting.length){
-        say('These have all been sent. Thank you.');
         return;
       }
 
@@ -582,7 +631,7 @@
       run.then(function(){
         sending = false;
         send.disabled = false;
-        send.textContent = failed ? 'Try the rest again' : 'Send more';
+        send.textContent = failed ? 'Try the rest again' : 'Send more photos';
 
         if (!failed){
           say(sent === 1
