@@ -99,13 +99,13 @@
     }, 50);
   }
 
-  function play(fade){
+  function play(silent){
     if (scoreBroken) return;
-    score.volume = fade ? 0 : LEVEL;
+    score.volume = silent ? 0 : LEVEL;
     var attempt = score.play();
     if (attempt && typeof attempt.then === 'function'){
       attempt.then(function(){
-        showToggle(); setPlaying(true); if (fade) fadeUp();
+        showToggle(); setPlaying(true);
       }).catch(function(){
         // autoplay refused — leave the control ready for a deliberate tap
         clearInterval(fadeTimer);
@@ -113,10 +113,13 @@
         showToggle(); setPlaying(false);
       });
     } else {
-      showToggle(); setPlaying(true); if (fade) fadeUp();
+      showToggle(); setPlaying(true);
     }
   }
 
+  // Playback has to begin inside the tap that opened the envelope — that
+  // gesture is what browsers grant permission on. So it starts silent, and
+  // the volume only comes up once the invitation itself is on screen.
   function startScore(){ play(true); }
 
   toggle.addEventListener('click', function(){
@@ -154,6 +157,7 @@
     suite.removeAttribute('aria-hidden');
     suite.classList.add('is-lit');
     reveal();
+    if (!score.paused) fadeUp();   // the music arrives with the invitation
   }
 
   function unseal(){
