@@ -275,18 +275,50 @@ function childFolder(parent, name) {
   return found.hasNext() ? found.next() : parent.createFolder(name);
 }
 
-function destinationFor(type, size) {
+function senderFolder(from) {
+  var typed = String(from || '')
+    .replace(/[\\\/:*?"<>|]+/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+
+  var key = norm(typed);
+  if (!key) return '';
+
+  try {
+    var rows = guestRows();
+
+    for (var i = 0; i < rows.length; i++) {
+      if (rows[i].key === key) return rows[i].name;
+    }
+
+    var words = key.split(' ');
+    var near = rows.filter(function (row) {
+      return words.every(function (w) {
+        return row.key.split(' ').indexOf(w) !== -1;
+      });
+    });
+    if (near.length === 1) return near[0].name;
+  } catch (err) {}
+
+  return typed.slice(0, 60);
+}
+
+function destinationFor(type, size, from) {
   var root = uploadFolder();
+  var box;
 
   if (String(type || '').indexOf('image/') === 0) {
-    return childFolder(root, PHOTO_FOLDER);
+    box = childFolder(root, PHOTO_FOLDER);
+  } else if (size > longVideoBytes()) {
+    box = folderFromSetting(BIG_FILES_KEY) || childFolder(root, LONG_FOLDER);
+  } else {
+    box = childFolder(root, VIDEO_FOLDER);
   }
 
-  if (size > longVideoBytes()) {
-    return folderFromSetting(BIG_FILES_KEY) || childFolder(root, LONG_FOLDER);
-  }
+  var who = senderFolder(from);
+  if (!who) return { folder: box, label: box.getName() };
 
-  return childFolder(root, VIDEO_FOLDER);
+  return { folder: childFolder(box, who), label: box.getName() + ' / ' + who };
 }
 
 function uploadName(from, name) {
@@ -327,7 +359,11 @@ function uploadInit(body) {
     var type = String(body.type || 'application/octet-stream');
     var name = uploadName(body.from, body.name);
 
-    var where = body.probe ? uploadFolder() : destinationFor(type, size);
+    var spot = body.probe
+      ? { folder: uploadFolder(), label: '' }
+      : destinationFor(type, size, body.from);
+
+    var where = spot.folder;
 
     var headers = {
       Authorization: 'Bearer ' + ScriptApp.getOAuthToken(),
@@ -362,7 +398,7 @@ function uploadInit(body) {
 
     return json({
       ok: true, session: session, name: name,
-      folder: where.getName(), free: freeSpace()
+      folder: spot.label || where.getName(), free: freeSpace()
     });
   } catch (err) {
     return json({ ok: false, error: String(err) });
@@ -381,10 +417,10 @@ function uploadBlob(body) {
 
     var name = uploadName(body.from, body.name);
     var blob = Utilities.newBlob(bytes, String(body.type || 'application/octet-stream'), name);
-    var file = destinationFor(body.type, bytes.length).createFile(blob);
+    var spot = destinationFor(body.type, bytes.length, body.from);
+    var file = spot.folder.createFile(blob);
 
-    logUpload(body.from, name, bytes.length, 'fallback', body.why,
-      file.getParents().hasNext() ? file.getParents().next().getName() : '');
+    logUpload(body.from, name, bytes.length, 'fallback', body.why, spot.label);
     return json({ ok: true, id: file.getId(), name: name });
   } catch (err) {
     return json({ ok: false, error: String(err) });

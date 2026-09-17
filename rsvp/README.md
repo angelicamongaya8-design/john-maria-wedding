@@ -266,8 +266,12 @@ Nothing is turned away for being long. The script sorts what arrives:
 ```
 <uploads folder>/
   Photos/        every image
+    Leonisa Gabas/
+    Geo Mongaya/
   Videos/        clips at or under the longvideo size
+    Geo Mongaya/
   Long videos/   anything larger
+    Jayson Gabua/
 ```
 
 The subfolders are made on first use, so an empty one never appears. Set
@@ -275,6 +279,22 @@ The subfolders are made on first use, so an empty one never appears. Set
 keep them on a different account once this one fills up.
 
 The `Uploads` tab records which folder each file went to.
+
+### Whose folder a file goes into
+
+The name the guest types in the photos section is looked up in `Guests`, using
+the same matching the RSVP uses. If it lands on exactly one guest, that guest's
+spelling in the sheet names the folder, so `angelica`, `Angelica` and
+`ANGELICA MONGAYA` all end up in one place rather than three.
+
+Anything else is used as typed, cleaned of characters Drive dislikes. That
+covers a guest who is not on the list, and a name that matches more than one
+guest: `gabas` is five people, so it stays `gabas` rather than guessing. A
+guest who leaves the name empty has their file put straight in `Photos` or
+`Videos` with no folder of its own.
+
+The sender's name is also still the start of every filename, so the two agree
+even if a folder is later moved or renamed.
 
 ### Where the line falls between a clip and a long video
 
