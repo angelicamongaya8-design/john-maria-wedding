@@ -1,0 +1,6 @@
+# This is a private celebration. The page is open to anyone holding the
+# link, but it should not be crawled, indexed or archived — the entourage
+# list and the venue address are not meant for search results.
+
+User-agent: *
+Disallow: /
