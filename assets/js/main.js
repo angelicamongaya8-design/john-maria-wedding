@@ -90,7 +90,7 @@
     if (!find || !RSVP_ENDPOINT) return;   // not connected yet
 
     find.hidden = false;
-    if (alt) alt.textContent = 'Or simply reply to the invitation you received';
+    if (alt) alt.textContent = 'If your name does not come up, kindly message John or Rhea';
 
     var current = null;   // { party, members, me }
 

@@ -492,6 +492,19 @@ section.tight{ gap:1.1rem; }
 }
 .text-cta:hover{ color: var(--ink); border-bottom-color: var(--ink); }
 .text-cta:focus-visible{ outline:2px solid var(--ink); outline-offset:4px; }
+
+/* ── the site is the invitation, so the venue carries its own directions ── */
+.map-line{ margin-top:1.1rem; }
+.map-cta{
+  font-family: var(--util); font-weight:300;
+  font-size:.6875rem; letter-spacing:.3em; text-transform:uppercase;
+  color: var(--ink-soft); text-decoration:none;
+  padding:.5rem 0;
+  border-bottom:1px solid var(--hair);
+  transition: color .3s ease, border-color .3s ease;
+}
+.map-cta:hover{ color: var(--ink); border-bottom-color: var(--ink); }
+.map-cta:focus-visible{ outline:2px solid var(--ink); outline-offset:4px; }
 .seats{ display:grid; gap:.3rem; justify-items:center; }
 .seats-n{
   font-family: var(--display); font-weight:300;
