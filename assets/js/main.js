@@ -346,7 +346,8 @@
     if (!box || !RSVP_ENDPOINT) return;   // nothing to upload to
     box.hidden = false;
 
-    var CHUNK = 8 * 1024 * 1024;          // per PUT, so a retry is cheap
+    var CHUNK = 4 * 1024 * 1024;          // per PUT, so a retry is cheap
+    var CHUNK_TRIES = 3;                  // forest signal drops; one drop is not a failure
     var FALLBACK_MAX = 18 * 1024 * 1024;  // matches the script's own ceiling
     var picked = [];
     var sending = false;
@@ -401,6 +402,12 @@
       var li = row(i); if (!li) return;
       var fill = li.querySelector('.share-bar span');
       if (fill) fill.style.width = Math.round(fraction * 100) + '%';
+
+      // A bar alone on a long upload reads as stuck. A number does not.
+      var s = li.querySelector('.share-s');
+      if (s && !li.classList.contains('is-done')){
+        s.textContent = Math.round(fraction * 100) + '%';
+      }
     }
 
     function state(i, text, klass){
@@ -424,9 +431,15 @@
       send.textContent = 'Send them';
 
       draw();
-      say(picked.length === 1
-        ? 'One file ready to send.'
-        : picked.length + ' files ready to send.');
+
+      var heavy = picked.filter(function(p){ return p.file.size > 200 * 1048576; });
+      var total = picked.reduce(function(n, p){ return n + p.file.size; }, 0);
+
+      say((picked.length === 1 ? 'One file' : picked.length + ' files')
+        + ', ' + mb(total) + ' in all. '
+        + (heavy.length
+            ? 'A long video takes many minutes on phone signal, so keep this page open. If it is easier, send it later on wifi.'
+            : 'Keep this page open while they go.'));
     });
 
     /** Apps Script is not fast, and a request to it can also simply hang.
@@ -488,34 +501,47 @@
     function putChunks(session, entry, i){
       var total = entry.file.size;
 
-      function step(start){
-        if (start >= total) return Promise.resolve();
-
-        var end = Math.min(start + CHUNK, total);
-        var slice = entry.file.slice(start, end);
-
+      /** One chunk, with its own retries. Nothing here advances the offset:
+       *  a retry that also retried the rest of the file would multiply
+       *  attempts and re-send bytes Google already has. */
+      function sendChunk(start, end, tries){
         return fetch(session, {
           method: 'PUT',
           headers: {
             'Content-Range': 'bytes ' + start + '-' + (end - 1) + '/' + total
           },
-          body: slice
+          body: entry.file.slice(start, end)
         })
         .catch(function(){
           // A blocked cross-origin request reaches JavaScript as nothing at
-          // all, so this is where a CORS refusal actually lands.
+          // all, so a CORS refusal and a dropped signal land here alike.
+          // They are told apart by whether a retry ever gets through.
           throw new Error('chunk: blocked or offline');
         })
         .then(function(r){
           // 308 means Google has the chunk and wants the next one.
-          if (r.status === 200 || r.status === 201){
-            progress(i, 1);
-            return;
-          }
-          if (r.status !== 308) throw new Error('chunk: ' + r.status);
+          if (r.status === 200 || r.status === 201 || r.status === 308) return r.status;
+          throw new Error('chunk: ' + r.status);
+        })
+        .catch(function(err){
+          // Half an hour of a guest's upload should not be thrown away
+          // because one 4 MB piece met a dead spot under the trees.
+          var n = (tries || 0) + 1;
+          if (n >= CHUNK_TRIES) throw err;
 
+          return new Promise(function(resolve){
+            window.setTimeout(resolve, 1500 * n);
+          }).then(function(){ return sendChunk(start, end, n); });
+        });
+      }
+
+      function step(start){
+        if (start >= total) return Promise.resolve();
+
+        var end = Math.min(start + CHUNK, total);
+        return sendChunk(start, end, 0).then(function(status){
           progress(i, end / total);
-          return step(end);
+          if (status === 308) return step(end);
         });
       }
 
