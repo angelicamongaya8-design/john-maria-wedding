@@ -451,46 +451,59 @@
     }
 
     /* ── the list ── */
-    function draw(){
-      list.textContent = '';
+    function rowFor(entry, i){
+      var li = document.createElement('li');
+      li.className = 'share-item';
+      li.setAttribute('data-i', String(i));
 
-      picked.forEach(function(entry, i){
-        var li = document.createElement('li');
-        li.className = 'share-item';
-        li.setAttribute('data-i', String(i));
+      var f = document.createElement('p');
+      f.className = 'share-f';
+      f.textContent = entry.file.name;
 
-        var f = document.createElement('p');
-        f.className = 'share-f';
-        f.textContent = entry.file.name;
+      var s = document.createElement('p');
+      s.className = 'share-s';
+      s.textContent = mb(entry.file.size);
 
-        var s = document.createElement('p');
-        s.className = 'share-s';
-        s.textContent = mb(entry.file.size);
+      var bar = document.createElement('div');
+      bar.className = 'share-bar';
+      bar.appendChild(document.createElement('span'));
 
-        var bar = document.createElement('div');
-        bar.className = 'share-bar';
-        bar.appendChild(document.createElement('span'));
-
-        var drop = document.createElement('button');
-        drop.type = 'button';
-        drop.className = 'share-x';
-        drop.textContent = '×';
-        drop.setAttribute('aria-label', 'Remove ' + entry.file.name);
-        drop.addEventListener('click', function(){
-          if (sending) return;                  // stop the batch first
-          picked.splice(i, 1);
-          draw();
-          say(picked.length ? '' : 'Nothing chosen.');
-        });
-
-        li.appendChild(f);
-        li.appendChild(s);
-        li.appendChild(drop);
-        li.appendChild(bar);
-        list.appendChild(li);
+      var drop = document.createElement('button');
+      drop.type = 'button';
+      drop.className = 'share-x';
+      drop.textContent = '×';
+      drop.setAttribute('aria-label', 'Remove ' + entry.file.name);
+      drop.addEventListener('click', function(){
+        if (entry.sending) return;              // this one is already on its way
+        var at = picked.indexOf(entry);         // not i: the list may have shifted
+        if (at === -1) return;
+        picked.splice(at, 1);
+        redraw();
+        say(picked.length ? '' : 'Nothing chosen.');
       });
 
+      li.appendChild(f);
+      li.appendChild(s);
+      li.appendChild(drop);
+      li.appendChild(bar);
+      return li;
+    }
+
+    /** Add only the rows that are not on screen yet. Rebuilding the whole
+     *  list would reset the bar and the percentage of a file in flight, and
+     *  a guest watching 54 per cent drop to nothing has every reason to
+     *  think something broke. */
+    function draw(){
+      for (var i = list.children.length; i < picked.length; i++){
+        list.appendChild(rowFor(picked[i], i));
+      }
       send.hidden = !picked.length;
+    }
+
+    /** Only when nothing is in flight, so indices can safely be renumbered. */
+    function redraw(){
+      list.textContent = '';
+      draw();
     }
 
     function row(i){ return list.querySelector('[data-i="' + i + '"]'); }
@@ -545,6 +558,16 @@
       finishPick();
     });
 
+    function finishPick(){
+      if (sending){
+        // The running queue will reach them on its own.
+        say('Added. They will go after the ones already on their way.');
+        return;
+      }
+
+      finishPickIdle();
+    }
+
     /** Nothing is turned away for being long any more — the script sorts a
      *  long video into its own folder. Only two things can actually stop a
      *  file: the slow route's own ceiling when the fast one is shut, and a
@@ -560,7 +583,7 @@
       return (!directWorks && size > FALLBACK_MAX) ? 'route' : 'room';
     }
 
-    function finishPick(){
+    function finishPickIdle(){
       var cap = ceiling();
       var overCap = 0;
       var reason = '';
@@ -799,7 +822,7 @@
      *  nothing is what a guest reads as broken. */
     function clearSent(){
       picked = picked.filter(function(p){ return !p.done && !p.hopeless; });
-      draw();
+      redraw();
       say('');
     }
 
@@ -811,7 +834,7 @@
 
     function startPicking(){
       picked = [];
-      draw();
+      redraw();
       say('');
       again.hidden = true;
       pick.value = '';     // choosing the same file again still counts as a change
@@ -849,15 +872,30 @@
       say('Please keep this page open until it says they are through.');
 
       var sent = 0, failed = 0;
+      picked.forEach(function(p){ p.tried = false; });
 
-      var run = picked.reduce(function(chain, entry, i){
-        return chain.then(function(){
-          if (entry.done || entry.hopeless) return;
-          return sendOne(entry, i).then(function(ok){
-            if (ok) sent++; else failed++;
-          });
+      /* Read one at a time from the list as it stands, not from a copy taken
+         when Send was tapped. A guest who remembers another photo halfway
+         through should be able to add it and have it go with the rest. */
+      function next(){
+        var entry = null, i = -1;
+        for (var k = 0; k < picked.length; k++){
+          if (!picked[k].done && !picked[k].hopeless && !picked[k].tried){
+            entry = picked[k]; i = k; break;
+          }
+        }
+        if (!entry || stopped) return Promise.resolve();
+
+        entry.tried = true;
+        entry.sending = true;
+        return sendOne(entry, i).then(function(ok){
+          entry.sending = false;
+          if (ok) sent++; else failed++;
+          return next();
         });
-      }, Promise.resolve());
+      }
+
+      var run = next();
 
       run.then(function(){
         sending = false;
