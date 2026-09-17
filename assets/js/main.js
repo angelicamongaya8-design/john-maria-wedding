@@ -381,7 +381,7 @@
     function sayWithDropOff(before, after, tone){
       dropOff().then(function(url){
         if (!url){
-          say(before + 'kindly send those to John or Rhea directly. ' + after, tone);
+          say(before + 'kindly send those to us directly. ' + after, tone);
           return;
         }
 
@@ -723,7 +723,7 @@
       }
 
       if (!nameEl.value.trim()){
-        say('Kindly add your name first, so they know whose photos these are.', 'bad');
+        say('Kindly add your name first, so we know whose photos these are.', 'bad');
         nameEl.focus();
         return;
       }
