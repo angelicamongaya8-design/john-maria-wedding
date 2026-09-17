@@ -360,8 +360,12 @@
     nameEl.addEventListener('focus', wakeScript);
     wakeWhenSeen(box);
 
-    var CHUNK = 4 * 1024 * 1024;
+    var link = navigator.connection || navigator.mozConnection || navigator.webkitConnection;
+    var thin = !!(link && /^(slow-)?2g$|^3g$/.test(String(link.effectiveType || '')));
+
+    var CHUNK = (thin ? 1 : 4) * 1024 * 1024;
     var CHUNK_TRIES = 3;
+    var CHUNK_WAIT = 90000;
     var FALLBACK_MAX = 18 * 1024 * 1024;
     var INIT_WAIT = 12000;
     var picked = [];
@@ -655,17 +659,27 @@
     }
 
     function putDirect(entry, id){
-      return openSession(entry, 0)
-      .then(function(res){
-        if (!res || !res.ok || !res.session){
-          throw new Error('init: ' + ((res && res.error) || 'no session'));
-        }
-        return putChunks(res.session, entry, id).then(function(){
+      var carried = entry.session && entry.at > 0
+        ? Promise.resolve({ ok: true, session: entry.session,
+            name: entry.sentAs, folder: entry.folder })
+        : openSession(entry, 0).then(function(res){
+            if (!res || !res.ok || !res.session){
+              throw new Error('init: ' + ((res && res.error) || 'no session'));
+            }
+            entry.session = res.session;
+            entry.sentAs = res.name || entry.file.name;
+            entry.folder = res.folder || '';
+            entry.at = 0;
+            return res;
+          });
+
+      return carried.then(function(res){
+        return putChunks(entry.session, entry, id).then(function(){
           ask({
             action: 'upload-done',
             from: nameEl.value.trim(),
-            name: res.name || entry.file.name,
-            folder: res.folder || '',
+            name: entry.sentAs || entry.file.name,
+            folder: entry.folder || '',
             size: entry.file.size
           }).catch(function(){});
         });
@@ -676,7 +690,14 @@
       var total = entry.file.size;
 
       function sendChunk(start, end, tries){
-        inFlight = ('AbortController' in window) ? new AbortController() : null;
+        var ctl = ('AbortController' in window) ? new AbortController() : null;
+        inFlight = ctl;
+
+        var giveUp = window.setTimeout(function(){
+          try { if (ctl) ctl.abort(); } catch (ignored) {}
+        }, CHUNK_WAIT);
+
+        function rest(){ window.clearTimeout(giveUp); }
 
         return fetch(session, {
           method: 'PUT',
@@ -684,8 +705,9 @@
             'Content-Range': 'bytes ' + start + '-' + (end - 1) + '/' + total
           },
           body: entry.file.slice(start, end),
-          signal: inFlight ? inFlight.signal : undefined
+          signal: ctl ? ctl.signal : undefined
         })
+        .then(function(r){ rest(); return r; }, function(err){ rest(); throw err; })
         .catch(function(){
           if (stopped) throw new Error('stopped');
 
@@ -693,13 +715,18 @@
         })
         .then(function(r){
           if (r.status === 200 || r.status === 201 || r.status === 308) return r.status;
+
+          if (r.status === 404 || r.status === 410){
+            entry.session = null;
+            entry.at = 0;
+          }
           throw new Error('chunk: ' + r.status);
         })
         .catch(function(err){
           if (stopped || String(err && err.message) === 'stopped') throw new Error('stopped');
 
           var n = (tries || 0) + 1;
-          if (n >= CHUNK_TRIES) throw err;
+          if (n >= CHUNK_TRIES || !entry.session) throw err;
 
           return new Promise(function(resolve){
             window.setTimeout(resolve, 1500 * n);
@@ -713,12 +740,13 @@
 
         var end = Math.min(start + CHUNK, total);
         return sendChunk(start, end, 0).then(function(status){
+          entry.at = end;
           progress(id, end / total);
           if (status === 308) return step(end);
         });
       }
 
-      return step(0);
+      return step(entry.at || 0);
     }
 
     function putThroughScript(entry, id, why){
@@ -765,11 +793,14 @@
       var route = directWorks
         ? putDirect(entry, id).catch(function(err){
             var why = String((err && err.message) || '');
+            var wobble = why === 'timeout' || why.indexOf('chunk:') === 0;
 
-            if (why !== 'timeout'){
+            if (!wobble){
               directWorks = false;
               directKnown = true;
             }
+
+            if (entry.file.size > FALLBACK_MAX) throw err;
 
             return putThroughScript(entry, id, why);
           })
