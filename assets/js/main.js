@@ -164,41 +164,35 @@
     });
 
     /* ── show the invitation ──
-       One person replies for themselves. Everyone on the invitation is
-       named so they know who else is still expected, but nobody is put in
-       the position of answering on another adult's behalf — if they are
-       asked to, they simply search again. */
+       Everyone on the invitation gets a control, as in the reference the
+       couple chose. But only the ones actually answered are sent: a parent
+       can reply for their children in one pass, and anyone unsure of
+       another adult simply leaves them blank for that person to answer.
+       Unanswered names are therefore visibly outstanding in the sheet,
+       rather than indistinguishable from a family that never replied. */
     function render(data){
       var members = data.members || [];
-      var me = whoWasLookedUp(input.value, members) || members[0];
-
-      current = { party: data.party || '', members: members, me: me };
+      current = { party: data.party || '', members: members, done: {} };
 
       seats.textContent = members.length;
       seatsL.textContent = members.length === 1 ? 'seat' : 'seats';
 
       list.textContent = '';
-      list.appendChild(guestRow(me));
+      members.forEach(function(person, i){ list.appendChild(guestRow(person, i)); });
 
-      var rest = members.filter(function(m){ return m !== me; });
-      if (rest.length){
-        others.textContent = 'Also on this invitation: ' + rest.join(', ')
-          + '. Each guest replies for themselves. Search again to reply for another.';
-        others.hidden = false;
-      } else {
-        others.hidden = true;
-      }
-
+      others.hidden = members.length < 2;
       party.hidden = false;
       again.hidden = true;
+      busy(send, false);
       say('');
       party.scrollIntoView({ behavior: calm ? 'auto' : 'smooth', block: 'center' });
     }
 
-    function guestRow(person){
+    function guestRow(person, i){
       var li = document.createElement('li');
       var wrap = document.createElement('div');
       wrap.className = 'guest';
+      wrap.setAttribute('data-guest', String(i));
 
       var n = document.createElement('p');
       n.className = 'guest-n';
@@ -211,9 +205,9 @@
       reply.setAttribute('aria-label', 'Reply for ' + person);
 
       [['yes', 'Joyfully accepts'], ['no', 'Regretfully declines']].forEach(function(opt){
-        var id = 'reply-' + opt[0];
+        var id = 'g' + i + '-' + opt[0];
         var r = document.createElement('input');
-        r.type = 'radio'; r.name = 'reply'; r.id = id; r.value = opt[0];
+        r.type = 'radio'; r.name = 'guest-' + i; r.id = id; r.value = opt[0];
         var l = document.createElement('label');
         l.setAttribute('for', id);
         l.textContent = opt[1];
@@ -228,11 +222,27 @@
       return li;
     }
 
-    /* ── back to the search, for the next person ── */
+    /** Swap a recorded guest's control for the reply itself, so a second
+     *  pass shows what is already in and what is still owed. */
+    function markDone(i, person, attending){
+      var wrap = list.querySelector('[data-guest="' + i + '"]');
+      if (!wrap) return;
+      var reply = wrap.querySelector('.reply');
+      if (reply) reply.remove();
+
+      var done = document.createElement('p');
+      done.className = 'reply-done';
+      done.textContent = attending ? 'Joyfully accepts' : 'Regretfully declines';
+      wrap.appendChild(done);
+      wrap.classList.add('is-done');
+
+      current.done[person] = true;
+    }
+
+    /* ── back to the search, for another invitation ── */
     function reset(){
       current = null;
       party.hidden = true;
-      others.hidden = true;
       again.hidden = true;
       find.hidden = false;
       busy(send, false);
@@ -248,18 +258,24 @@
     send.addEventListener('click', function(){
       if (!current) return;
 
-      var picked = list.querySelector('input[name="reply"]:checked');
-      if (!picked){
-        say('Kindly choose a reply for ' + current.me + ' before confirming.', 'bad');
+      var members = current.members || [];
+      var replies = [];
+
+      members.forEach(function(person, i){
+        if (current.done[person]) return;                    // already recorded
+        var picked = list.querySelector('input[name="guest-' + i + '"]:checked');
+        if (picked) replies.push({ index: i, name: person, attending: picked.value === 'yes' });
+      });
+
+      if (!replies.length){
+        say('Kindly reply for at least one guest before confirming.', 'bad');
         return;
       }
 
-      var replies = [{ name: current.me, attending: picked.value === 'yes' }];
-
-      busy(send, true, 'Sending…');
+      busy(send, true, 'Sending');
       say('');
 
-      // text/plain keeps this a simple request — Apps Script cannot answer
+      // text/plain keeps this a simple request. Apps Script cannot answer
       // the CORS preflight that application/json would trigger
       fetch(RSVP_ENDPOINT, {
         method: 'POST',
@@ -267,26 +283,33 @@
         body: JSON.stringify({
           party: current.party || '',
           lookup: input.value.trim(),
-          replies: replies
+          replies: replies.map(function(r){ return { name: r.name, attending: r.attending }; })
         })
       })
         .then(function(r){ return r.json(); })
         .then(function(res){
           if (!res || !res.ok) throw new Error('rejected');
 
-          var who = current.me;
-          var yes = picked.value === 'yes';
+          replies.forEach(function(r){ markDone(r.index, r.name, r.attending); });
 
-          find.hidden = true;
-          party.hidden = true;
-          others.hidden = true;
+          var waiting = members.filter(function(m){ return !current.done[m]; });
+          var names = replies.map(function(r){ return r.name; });
+
+          busy(send, false);
+
+          if (!waiting.length){
+            party.hidden = true;
+            again.hidden = false;
+            say('Thank you. Your reply is in, and we cannot wait to celebrate with you.');
+            msg.scrollIntoView({ behavior: calm ? 'auto' : 'smooth', block: 'center' });
+            return;
+          }
+
+          send.hidden = false;
           again.hidden = false;
-
-          say(yes
-            ? 'Thank you, ' + who + '. Your reply is in. We cannot wait to celebrate with you.'
-            : 'Thank you, ' + who + '. Your reply is in. You will be dearly missed.');
-
-          msg.scrollIntoView({ behavior: calm ? 'auto' : 'smooth', block: 'center' });
+          say('Recorded for ' + names.join(', ') + '. '
+            + (waiting.length === 1 ? waiting[0] + ' has' : waiting.join(', ') + ' have')
+            + ' still to reply, whenever is convenient.');
         })
         .catch(function(){
           busy(send, false);
