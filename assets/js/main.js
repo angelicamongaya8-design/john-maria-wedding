@@ -155,7 +155,7 @@
     if (!find || !RSVP_ENDPOINT) return;
 
     find.hidden = false;
-    if (alt) alt.textContent = 'If your name does not come up, kindly let us know';
+    if (alt) alt.textContent = 'If your name does not come up, let us know';
 
     var current = null;
 
@@ -224,7 +224,7 @@
         .then(function(data){
           done();
           if (!data || !data.found){
-            say('We could not find that name. Kindly try your full name. If it still does not come up, please let us know.', 'bad');
+            say('We could not find that name. Try your full name. If it still does not come up, please let us know.', 'bad');
             return;
           }
           current = data;
@@ -347,7 +347,7 @@
       });
 
       if (!replies.length){
-        say('Kindly reply for at least one guest before confirming.', 'bad');
+        say('Please reply for at least one guest before confirming.', 'bad');
         return;
       }
 
@@ -665,9 +665,9 @@
 
       if (reason === 'room'){
         say(opening + many + ' larger than the ' + mb(roomLeft)
-          + ' of space left, so kindly send ' + them + ' to us directly. ' + closing, 'bad');
+          + ' of space left, so please send ' + them + ' to us directly. ' + closing, 'bad');
       } else {
-        sayWithDropOff(opening + many + ' longer than this page can carry, so kindly ',
+        sayWithDropOff(opening + many + ' longer than this page can carry, so please ',
           overCap === 1 ? 'drop it here instead' : 'drop those here instead',
           overCap === 1 ? 'send it to us directly' : 'send those to us directly',
           closing, 'bad');
@@ -930,7 +930,7 @@
       }
 
       if (!nameEl.value.trim()){
-        say('Kindly add your name first, so we know whose photos these are.', 'bad');
+        say('Please add your name first, so we know whose photos these are.', 'bad');
         nameEl.focus();
         return;
       }
@@ -1008,7 +1008,7 @@
 
         if (tooBig){
           sayWithDropOff(
-            lines.join(', ') + '. A long video is beyond what we can take here, so kindly ',
+            lines.join(', ') + '. A long video is beyond what we can take here, so please ',
             tooBig === 1 ? 'drop it here instead' : 'drop those here instead',
             tooBig === 1 ? 'send it to us directly' : 'send those to us directly',
             closing, 'bad');
