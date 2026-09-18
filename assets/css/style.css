@@ -88,6 +88,7 @@ a{ color:inherit; }
 #overture.is-zooming .env-lace,
 #overture.is-zooming .overture-eyebrow,
 #overture.is-zooming .open-cue,
+#overture.is-zooming .drift-over,
 #overture.is-zooming .motes{
   opacity:0;
   transition: opacity .45s ease;
@@ -102,7 +103,10 @@ a{ color:inherit; }
   transition: opacity .34s ease;
 }
 
+.drift-over{ position:absolute; z-index:1; }
+
 .overture-inner{
+  position:relative; z-index:2;
   display:grid; justify-items:center; gap:2.4rem;
   text-align:center;
   perspective: 1400px;
@@ -261,7 +265,40 @@ a{ color:inherit; }
   .leaf{ padding-inline: 20px; }
 }
 
+.drift{
+  position:fixed; inset:0; z-index:1;
+  overflow:hidden; pointer-events:none;
+}
+.drift-leaf{
+  position:absolute; top:0; left:0;
+  opacity:0; will-change:transform;
+  animation: driftfall linear infinite;
+}
+.drift-in{
+  position:absolute; inset:0; z-index:0;
+  overflow:hidden; pointer-events:none;
+}
+.drift-in .drift-leaf{ animation-name: driftfall-in; }
+@keyframes driftfall-in{
+  0%   { transform: translate3d(0, -140px, 0) rotate(var(--r0)); opacity:0; }
+  12%  { opacity: var(--o); }
+  88%  { opacity: var(--o); }
+  100% { transform: translate3d(var(--dx), var(--drop), 0) rotate(var(--r1)); opacity:0; }
+}
+.drift-leaf > span{ display:block; animation: driftsway ease-in-out infinite; }
+.drift-leaf svg{ display:block; }
+@keyframes driftfall{
+  0%   { transform: translate3d(0, -18vh, 0) rotate(var(--r0)); opacity:0; }
+  10%  { opacity: var(--o); }
+  90%  { opacity: var(--o); }
+  100% { transform: translate3d(var(--dx), 116vh, 0) rotate(var(--r1)); opacity:0; }
+}
+@keyframes driftsway{
+  0%{ margin-left:0 } 50%{ margin-left: var(--sw) } 100%{ margin-left:0 }
+}
+
 section{
+  position:relative; z-index:2;
   padding-block: clamp(3.25rem, 7vw, 5rem);
   display:grid; gap:1.6rem; justify-items:center;
   text-align:center;

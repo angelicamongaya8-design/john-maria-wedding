@@ -27,6 +27,89 @@
     host.appendChild(frag);
   })();
 
+  (function drift(){
+    if (calm) return;
+    var host = document.getElementById('drift');
+    if (!host) return;
+
+    var stroke = '#B4B1A9';
+    function leaf(size){
+      return '<svg width="' + size + '" height="' + (size * 0.78).toFixed(1) + '" viewBox="0 0 30 24" fill="none">'
+        + '<path d="M2 21C2 10 9 2 21 2c5 0 7 2 7 6 0 10-8 16-18 16-5 0-8-1-8-3Z" stroke="' + stroke + '" stroke-width="1.4" stroke-linejoin="round"/>'
+        + '<path d="M2 21C9 17 16 11 21 2" stroke="' + stroke + '" stroke-width="1.2"/>'
+        + '<path d="M8 18C9 14 10 12 12 9M13 20C15 16 17 13 19 10M18 20C20 17 22 15 24 12" stroke="' + stroke + '" stroke-width="1"/>'
+        + '</svg>';
+    }
+    function pick(a, b){ return a + Math.random() * (b - a); }
+
+    function petal(size){
+      return '<svg width="' + size + '" height="' + (size * 1.55).toFixed(1) + '" viewBox="0 0 18 28" fill="none">'
+        + '<path d="M9 1C15 8 17 17 12 24c-2.6 3.6-5.4 3.6-8 0C-1 17 3 8 9 1Z" stroke="' + stroke + '" stroke-width="1.4" stroke-linejoin="round"/>'
+        + '<path d="M9 4c-2 7-2 13 0 20" stroke="' + stroke + '" stroke-width="1.1"/>'
+        + '</svg>';
+    }
+    function sprig(size){
+      return '<svg width="' + size + '" height="' + (size * 0.92).toFixed(1) + '" viewBox="0 0 28 26" fill="none">'
+        + '<path d="M3 24C8 19 14 13 24 6" stroke="' + stroke + '" stroke-width="1.3" stroke-linecap="round"/>'
+        + '<path d="M13 14c-1-5 1-8 6-9 1 5-1 8-6 9Z" stroke="' + stroke + '" stroke-width="1.3" stroke-linejoin="round"/>'
+        + '<path d="M11 16c-5-1-7 1-8 6 5 1 7-1 8-6Z" stroke="' + stroke + '" stroke-width="1.3" stroke-linejoin="round"/>'
+        + '</svg>';
+    }
+
+    function one(wide, box){
+      var d = document.createElement('span');
+      d.className = 'drift-leaf';
+      var inner = document.createElement('span');
+      var roll = Math.random();
+      inner.innerHTML = roll < 0.36 ? petal(pick(12, 20).toFixed(1))
+                      : roll < 0.62 ? sprig(pick(17, 28).toFixed(1))
+                                    : leaf(pick(16, 29).toFixed(1));
+      d.appendChild(inner);
+
+      d.style.left = pick(1, 92).toFixed(2) + '%';
+      if (!wide) d.style.setProperty('--drop', (box + 160) + 'px');
+      d.style.setProperty('--dx', pick(-46, 46).toFixed(0) + 'px');
+      d.style.setProperty('--r0', pick(-40, 40).toFixed(0) + 'deg');
+      d.style.setProperty('--r1', pick(150, 430).toFixed(0) + 'deg');
+      d.style.setProperty('--o',  pick(0.34, 0.6).toFixed(2));
+      d.style.setProperty('--sw', pick(14, 34).toFixed(0) + 'px');
+
+      var span = pick(17, 28);
+      d.style.animationDuration = span.toFixed(1) + 's';
+      d.style.animationDelay = (-Math.random() * span).toFixed(1) + 's';
+      inner.style.animationDuration = pick(4, 8).toFixed(1) + 's';
+      inner.style.animationDelay = (-Math.random() * 6).toFixed(1) + 's';
+      return d;
+    }
+
+    var narrow = window.innerWidth < 600;
+    var frag = document.createDocumentFragment();
+    var many = narrow ? 14 : 20;
+    for (var i = 0; i < many; i++) frag.appendChild(one(true, 0));
+    host.appendChild(frag);
+
+    var over = document.getElementById('drift-over');
+    if (over){
+      var overFrag = document.createDocumentFragment();
+      var overMany = narrow ? 10 : 15;
+      for (var j = 0; j < overMany; j++) overFrag.appendChild(one(true, 0));
+      over.appendChild(overFrag);
+    }
+
+    var overs = document.querySelectorAll('section.cover');
+    for (var c = 0; c < overs.length; c++){
+      var box = document.createElement('div');
+      box.className = 'drift-in';
+      box.setAttribute('aria-hidden', 'true');
+      var inFrag = document.createDocumentFragment();
+      var each = narrow ? 14 : 20;
+      var tall = Math.round(overs[c].getBoundingClientRect().height) || 600;
+      for (var k = 0; k < each; k++) inFrag.appendChild(one(false, tall));
+      box.appendChild(inFrag);
+      overs[c].insertBefore(box, overs[c].firstChild);
+    }
+  })();
+
   (function countdown(){
     var when = new Date('2027-02-02T15:00:00+08:00').getTime();
     var d = document.getElementById('c-d'),
