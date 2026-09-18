@@ -268,6 +268,45 @@ section{
 }
 section.tight{ gap:1.1rem; }
 
+section.cover{
+  min-height: 74vh;
+  min-height: 74svh;
+  align-content:center;
+  gap:1.5rem;
+  background: var(--paper-deep);
+  margin-inline: -24px;
+  padding-inline: 24px;
+}
+@media (max-width: 460px){
+  section.cover{ margin-inline: -20px; padding-inline: 20px; }
+}
+.cover-art{
+  height: clamp(8.75rem, 31vw, 12rem);
+  width:auto; opacity:.95;
+}
+.cover-art.wide{
+  height:auto;
+  width: clamp(12.5rem, 60vw, 17.5rem);
+}
+.cover-t{
+  font-size: clamp(2.3rem, 1.5rem + 3.4vw, 3.5rem);
+  font-weight:300; line-height:1.08;
+  max-width: 15rem;
+}
+.cover-t em{ font-style:italic; color: var(--ink-soft); }
+.cover-cue{
+  font-family: var(--util); font-weight:300;
+  font-size:.625rem; letter-spacing:.34em; text-transform:uppercase;
+  color: var(--ink-faint);
+  text-decoration:none;
+  border-bottom:1px solid var(--hair);
+  padding-bottom:.4rem;
+}
+.cover-cue:hover, .cover-cue:focus-visible{
+  color: var(--ink-soft); border-color: var(--ink-faint);
+}
+[id="day"], [id="entourage"], [id="photos"], [id="rsvp"]{ scroll-margin-top: 1.5rem; }
+
 .hero{ padding-block: clamp(4rem, 12vw, 7.5rem) clamp(3rem, 8vw, 5rem); }
 .hero-mark{ width:clamp(112px, 26vw, 150px); opacity:.92; }
 .hero-names{
