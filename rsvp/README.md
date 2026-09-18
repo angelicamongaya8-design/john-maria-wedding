@@ -341,10 +341,10 @@ Five files in `assets/img`, and replacing one is the whole job:
 | `cover-entourage.jpg` | The Entourage, left of the title | upright, 3:4 |
 | `cover-story.jpg` | Our story, upper right | upright, 3:4 |
 | `cover-story-2.jpg` | Our story, lower left | upright, 3:4 |
-| `cover-rsvp.jpg` | RSVP, across the top | landscape, 16:10 |
+| `cover-rsvp.jpg` | RSVP, lower right | upright, 3:4 |
 
-Keep the names. Any shape is accepted: the frame holds 3:4 (or 16:10 for
-the RSVP band) and the photograph is cropped from the centre to fill it, so
+Keep the names. Any shape is accepted: every frame holds 3:4 and the
+photograph is cropped from the centre to fill it, so
 nothing breaks, but a face near an edge can be trimmed. Sending something
 close to the stated shape avoids that. Around 1200 pixels on the long side
 is plenty.

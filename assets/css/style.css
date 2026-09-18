@@ -325,7 +325,6 @@ section.cover.has-photo .cover-cue{ position:relative; z-index:2; }
   object-fit: cover;
   object-position: center;
 }
-section.cover-band .cover-photo img{ aspect-ratio: 16 / 10; }
 
 section.cover-right{ justify-items:start; text-align:left; padding-right:52%; }
 section.cover-right .cover-t{ max-width:6.5em; }
@@ -354,11 +353,15 @@ section.cover-pair .cover-photo-b{
   transform: rotate(-2.4deg);
 }
 
-section.cover-band{ justify-items:center; text-align:center; }
-section.cover-band .cover-photo{
-  position:static; transform:none;
-  width:112%; max-width:none;
-  margin-bottom:.6rem;
+section.cover-low{
+  justify-items:start; text-align:left;
+  align-content:start;
+  padding-top: clamp(3rem, 10vw, 4.5rem);
+}
+section.cover-low .cover-t{ max-width:6.5em; }
+section.cover-low .cover-photo{
+  position:absolute; right:-8%; bottom:7%; width:54%; z-index:1;
+  transform: rotate(2.2deg);
 }
 
 section.cover.no-photo{
@@ -374,10 +377,9 @@ section.cover.no-photo .cover-t{ max-width:15rem; }
   section.cover-left{ padding-left:46%; }
   section.cover-right .cover-photo,
   section.cover-left .cover-photo{ width:48%; }
+  section.cover-low .cover-photo{ width:48%; }
   section.cover-pair .cover-photo{ width:42%; }
   section.cover-pair .cover-photo-b{ width:36%; }
-}
-  .cover-photo{ width:48%; }
 }
 .cover-t{
   font-size: clamp(2.3rem, 1.5rem + 3.4vw, 3.5rem);
