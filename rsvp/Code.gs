@@ -29,6 +29,20 @@ function norm(value) {
     .trim();
 }
 
+var HONORIFICS = {
+  mr: 1, mrs: 1, ms: 1, miss: 1, mister: 1,
+  ptr: 1, pastor: 1, rev: 1, reverend: 1, fr: 1, father: 1,
+  dr: 1, doc: 1, engr: 1, atty: 1, hon: 1,
+  sir: 1, madam: 1, maam: 1, bro: 1, sis: 1
+};
+
+function nameKey(value) {
+  var words = norm(value).split(' ').filter(function (w) {
+    return w && !HONORIFICS[w];
+  });
+  return words.join(' ');
+}
+
 function json(payload) {
   return ContentService
     .createTextOutput(JSON.stringify(payload))
@@ -46,7 +60,7 @@ function guestRows() {
     var party = String(values[i][0] || '').trim();
     var name  = String(values[i][1] || '').trim();
     if (!party || !name) continue;
-    rows.push({ party: party, name: name, key: norm(name) });
+    rows.push({ party: party, name: name, key: nameKey(name) });
   }
   return rows;
 }
@@ -61,7 +75,7 @@ function repliedMap() {
     var name  = String(values[i][2] || '').trim();
     var reply = String(values[i][3] || '').trim();
     if (!name) continue;
-    map[norm(name)] = /joyfully/i.test(reply);
+    map[nameKey(name)] = /joyfully/i.test(reply);
   }
   return map;
 }
@@ -72,7 +86,7 @@ function doGet(e) {
       return json({ ok: true, folder: settingValue(BIG_FILES_KEY) });
     }
 
-    var typed = norm((e && e.parameter && e.parameter.name) || '');
+    var typed = nameKey((e && e.parameter && e.parameter.name) || '');
     if (!typed) return json({ found: false });
 
     var rows = guestRows();
@@ -82,14 +96,24 @@ function doGet(e) {
       if (rows[i].key === typed) { hit = rows[i]; break; }
     }
 
+    var words = typed.split(' ');
+
     if (!hit) {
-      var words = typed.split(' ');
-      var near = rows.filter(function (row) {
+      var fewer = rows.filter(function (row) {
         return words.every(function (w) {
           return row.key.split(' ').indexOf(w) !== -1;
         });
       });
-      if (near.length === 1) hit = near[0];
+      if (fewer.length === 1) hit = fewer[0];
+    }
+
+    if (!hit) {
+      var more = rows.filter(function (row) {
+        return row.key.split(' ').every(function (w) {
+          return words.indexOf(w) !== -1;
+        });
+      });
+      if (more.length === 1) hit = more[0];
     }
 
     if (!hit) return json({ found: false });
@@ -101,7 +125,7 @@ function doGet(e) {
     var already = repliedMap();
     var replied = {};
     members.forEach(function (name) {
-      var key = norm(name);
+      var key = nameKey(name);
       if (already.hasOwnProperty(key)) replied[name] = already[key];
     });
 
@@ -138,7 +162,7 @@ function recordReplies(body) {
 
     var already = repliedMap();
     var fresh = replies.filter(function (r) {
-      return !already.hasOwnProperty(norm(r.name || ''));
+      return !already.hasOwnProperty(nameKey(r.name || ''));
     });
 
     if (!fresh.length) {
@@ -281,7 +305,7 @@ function senderFolder(from) {
     .replace(/\s+/g, ' ')
     .trim();
 
-  var key = norm(typed);
+  var key = nameKey(typed);
   if (!key) return '';
 
   try {
@@ -292,12 +316,19 @@ function senderFolder(from) {
     }
 
     var words = key.split(' ');
-    var near = rows.filter(function (row) {
+    var fewer = rows.filter(function (row) {
       return words.every(function (w) {
         return row.key.split(' ').indexOf(w) !== -1;
       });
     });
-    if (near.length === 1) return near[0].name;
+    if (fewer.length === 1) return fewer[0].name;
+
+    var more = rows.filter(function (row) {
+      return row.key.split(' ').every(function (w) {
+        return words.indexOf(w) !== -1;
+      });
+    });
+    if (more.length === 1) return more[0].name;
   } catch (err) {}
 
   return typed.slice(0, 60);

@@ -42,10 +42,19 @@ column to keep in sync, and no way for the two to disagree.
 The Party name is shown to nobody. Use whatever is easiest to keep straight.
 
 **Names can be typed forgivingly.** Case, accents, extra spaces, periods and
-hyphens are all ignored, so `ma. rhea gabas` finds `Ma. Rhea Gabas`. A guest
-who types only part of their name still gets through when it matches exactly
-one person — if it could match two, the site says it cannot find them rather
-than showing someone else's family.
+hyphens are all ignored, so `ma. rhea gabas` finds `Ma. Rhea Gabas`. So are
+titles: `Mr.`, `Mrs.`, `Ms.`, `Ptr.`, `Dr.`, `Engr.`, `Atty.` and the like are
+dropped from both sides, which matters because the entourage list on the site
+prints them and a guest copies what they see.
+
+A guest who types **less** than the sheet holds gets through when it points at
+one person: `francisco gabas` finds `Francisco Gabas Jr.`, and on a list like
+this one even a first name alone is usually enough. A guest who types **more**
+also gets through on the same rule, so `Rhenz Llovel Domingo` still finds
+`Rhenz Domingo` and `Lovelyn Atuel-Domingo` finds `Lovelyn Atuel`. Either way,
+if it could be two people the site says it cannot find them rather than
+showing someone else's family — so a bare surname shared by five Gabases is
+refused, by design.
 
 > **Keep this Sheet private.** Do not set it to "anyone with the link".
 > The whole point of holding the list here is that only you can see it.
