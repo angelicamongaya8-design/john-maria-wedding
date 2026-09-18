@@ -375,7 +375,38 @@ section.cover-low .cover-photo{
 }
 
 @media (min-width: 700px){
-  section.cover-low{ align-content:center; padding-top:0; }
+  section.cover-right,
+  section.cover-left{ --cover-frame: min(20rem, 40vh); }
+
+  section.cover-right{ padding-right: var(--cover-frame); justify-items:end; }
+  section.cover-left{ padding-left: var(--cover-frame); justify-items:start; }
+
+  section.cover-low{
+    --cover-frame: min(20rem, 35vh);
+    align-content:center; padding-top:0;
+    padding-right: var(--cover-frame);
+    justify-items:end;
+  }
+  section.cover-low .cover-photo{ bottom:9%; width:var(--cover-frame); }
+
+  section.cover-pair{
+    --cover-frame: min(11rem, 25vh);
+    padding-inline: calc(var(--cover-frame) + 1rem);
+  }
+  section.cover-pair .cover-t{
+    font-size: clamp(1.9rem, 1.1rem + 1.6vw, 2.3rem);
+    max-width:none;
+  }
+  section.cover-pair .cover-photo{
+    top:50%; bottom:auto; left:auto; right:-1.5rem;
+    width:var(--cover-frame);
+    transform: translateY(-58%) rotate(2deg);
+  }
+  section.cover-pair .cover-photo-b{
+    top:50%; bottom:auto; right:auto; left:-1.5rem;
+    width:calc(var(--cover-frame) * .86);
+    transform: translateY(-40%) rotate(-2.4deg);
+  }
 }
 
 section.cover.no-photo{
@@ -514,8 +545,8 @@ section.cover.no-photo .cover-t{ max-width:15rem; }
 @media (min-width: 480px){
   .roll.two{ gap: clamp(1.4rem, 4vw, 2.2rem); }
 }
-@media (max-width: 479px){
-  .roll.two{ grid-template-columns: 1fr; gap: clamp(1.5rem, 4vw, 2.2rem); }
+@media (max-width: 359px){
+  .roll.two{ grid-template-columns: 1fr; }
 }
 
 .role{ display:grid; gap:.3rem; justify-items:center; }
@@ -527,18 +558,18 @@ section.cover.no-photo .cover-t{ max-width:15rem; }
   text-wrap: balance;
 }
 .role-n{
-  display:grid; gap:.05rem;
+  display:grid; gap:.5rem;
   color: var(--ink-soft);
-  font-size:.8125rem; line-height:1.45;
+  font-size:.8125rem; line-height:1.24;
   text-wrap: balance;
 }
 @media (min-width: 480px){
   .role-t{ font-size:1.125rem; }
-  .role-n{ font-size:.875rem; line-height:1.5; }
+  .role-n{ font-size:.875rem; gap:.42rem; line-height:1.3; }
 }
 @media (min-width: 620px){
   .role-t{ font-size:1.1875rem; }
-  .role-n{ font-size: var(--step-0); line-height:1.6; }
+  .role-n{ font-size: var(--step-0); gap:.3rem; line-height:1.45; }
 }
 
 .subhead{
@@ -736,25 +767,39 @@ section.cover.no-photo .cover-t{ max-width:15rem; }
   margin:-1px; overflow:hidden; clip-path: inset(50%);
 }
 .reply label{
+  flex:1 1 auto;
+  display:grid; align-content:center;
+  text-align:center;
+  white-space:nowrap;
   font-family: var(--util); font-weight:300;
-  font-size:.6875rem; letter-spacing:.2em; text-transform:uppercase;
-  color: var(--ink-faint);
-  padding:.65rem .9rem .55rem calc(.9rem + .2em);
+  font-size:.6875rem; letter-spacing:.14em; text-transform:uppercase;
+  line-height:1.5;
+  padding:.75rem .55rem .7rem calc(.55rem + .14em);
   cursor:pointer;
   transition: background .25s ease, color .25s ease;
-  white-space:nowrap;
 }
 .reply label + input + label{ border-left:1px solid var(--hair); }
-@media (max-width: 460px){
-  .reply{ flex-direction:column; }
-  .reply label{ text-align:center; padding-inline:.9rem; }
-  .reply label + input + label{ border-left:0; border-top:1px solid var(--hair); }
+
+.reply input[value="yes"] + label{ color: var(--ink); }
+.reply input[value="no"]  + label{ color: var(--ink-faint); }
+
+.reply input[value="yes"]:checked + label{
+  background: var(--ink); color: var(--paper);
 }
-.reply input:checked + label{ background: var(--ink); color: var(--paper); }
+.reply input[value="no"]:checked + label{
+  background: var(--hair-soft); color: var(--ink-soft);
+  box-shadow: inset 0 0 0 1px var(--hair);
+}
 .reply input:focus-visible + label{ outline:2px solid var(--ink); outline-offset:2px; }
 
-@media (max-width: 380px){
-  .reply label{ font-size:.53125rem; padding-inline:.7rem; letter-spacing:.14em; }
+@media (max-width: 429px){
+  .reply label{
+    letter-spacing:.08em;
+    padding:.75rem .45rem .7rem calc(.45rem + .08em);
+  }
+}
+@media (max-width: 349px){
+  .reply label{ white-space:normal; letter-spacing:.1em; }
 }
 
 .colophon{
