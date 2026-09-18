@@ -319,7 +319,13 @@ section.cover.has-photo .cover-cue{ position:relative; z-index:2; }
   border:6px solid #FFF;
   box-shadow: 0 18px 40px -26px rgba(17,17,16,.5);
 }
-.cover-photo img{ width:100%; display:block; }
+.cover-photo img{
+  width:100%; display:block;
+  aspect-ratio: 3 / 4;
+  object-fit: cover;
+  object-position: center;
+}
+section.cover-band .cover-photo img{ aspect-ratio: 16 / 10; }
 
 section.cover-right{ justify-items:start; text-align:left; padding-right:52%; }
 section.cover-right .cover-t{ max-width:6.5em; }
