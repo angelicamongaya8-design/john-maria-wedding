@@ -240,7 +240,7 @@
       var members = data.members || [];
       var replied = data.replied || {};
 
-      current = { party: data.party || '', members: members, done: {} };
+      current = { party: data.party || '', members: members, done: {}, going: {} };
 
       seats.textContent = members.length;
       seatsL.textContent = members.length === 1 ? 'seat' : 'seats';
@@ -318,6 +318,7 @@
       wrap.classList.add('is-done');
 
       current.done[person] = true;
+      current.going[person] = !!attending;
     }
 
     function reset(){
@@ -383,7 +384,12 @@
           if (!waiting.length){
             party.hidden = true;
             again.hidden = false;
-            say('Thank you. Your reply is in, and we cannot wait to celebrate with you.');
+            var coming = members.some(function(m){ return current.going[m]; });
+            say(coming
+              ? 'Thank you. Your reply is in, and we cannot wait to celebrate with you.'
+              : (members.length === 1
+                  ? 'Thank you for letting us know. You will be missed on the day.'
+                  : 'Thank you for letting us know. You will all be missed on the day.'));
             msg.scrollIntoView({ behavior: calm ? 'auto' : 'smooth', block: 'center' });
             return;
           }
