@@ -92,6 +92,37 @@
     });
   }
 
+  (function coverPhotos(){
+    var shots = document.querySelectorAll('.cover-photo img');
+
+    Array.prototype.forEach.call(shots, function(img){
+      function fallBack(){
+        var cover = img.closest ? img.closest('section.cover') : null;
+        if (!cover) return;
+        cover.classList.remove('has-photo');
+        cover.classList.add('no-photo');
+      }
+
+      img.addEventListener('error', fallBack);
+      if (img.complete && img.naturalWidth === 0) fallBack();
+    });
+  })();
+
+  (function coverJumps(){
+    var cues = document.querySelectorAll('.cover-cue');
+
+    Array.prototype.forEach.call(cues, function(cue){
+      cue.addEventListener('click', function(ev){
+        var id = String(cue.getAttribute('href') || '').replace('#', '');
+        var target = id && document.getElementById(id);
+        if (!target) return;
+
+        ev.preventDefault();
+        target.scrollIntoView({ behavior: calm ? 'auto' : 'smooth', block: 'start' });
+      });
+    });
+  })();
+
   function wakeWhenSeen(el){
     if (!el) return;
     if (!('IntersectionObserver' in window)) return;
