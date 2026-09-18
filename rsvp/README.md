@@ -51,10 +51,12 @@ A guest who types **less** than the sheet holds gets through when it points at
 one person: `francisco gabas` finds `Francisco Gabas Jr.`, and on a list like
 this one even a first name alone is usually enough. A guest who types **more**
 also gets through on the same rule, so `Rhenz Llovel Domingo` still finds
-`Rhenz Domingo` and `Lovelyn Atuel-Domingo` finds `Lovelyn Atuel`. Either way,
-if it could be two people the site says it cannot find them rather than
-showing someone else's family — so a bare surname shared by five Gabases is
-refused, by design.
+`Rhenz Domingo` and `Lovelyn Atuel-Domingo` finds `Lovelyn Atuel`.
+
+Either way it must land on exactly one person. A bare surname shared by a
+family is refused rather than guessed, and the guest is told their name fits
+more than one guest and asked for their full name — so nobody reads it as not
+being invited, and no one is shown a household that is not theirs.
 
 > **Keep this Sheet private.** Do not set it to "anyone with the link".
 > The whole point of holding the list here is that only you can see it.
@@ -148,6 +150,10 @@ it reads the list live.
 
 **"We could not find that name"** — the name is not in `Guests`, or it is
 spelled differently there. Check for a trailing space in the cell.
+
+**"That name belongs to more than one guest"** — what they typed fits several
+people, so the site will not guess. A bare surname does this whenever a family
+shares it. They should type their full name.
 
 **"Something went wrong reaching our guest list"** — the deployment is not
 public, or the URL is wrong. Re-check step 3, and make sure the URL ends in

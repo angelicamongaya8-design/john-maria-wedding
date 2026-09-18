@@ -224,7 +224,10 @@
         .then(function(data){
           done();
           if (!data || !data.found){
-            say('We could not find that name. Try your full name. If it still does not come up, please let us know.', 'bad');
+            say(data && data.several
+              ? 'That name belongs to more than one guest. Please type your full name.'
+              : 'We could not find that name. Try your full name. If it still does not come up, please let us know.',
+              'bad');
             return;
           }
           current = data;

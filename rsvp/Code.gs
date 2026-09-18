@@ -97,6 +97,7 @@ function doGet(e) {
     }
 
     var words = typed.split(' ');
+    var several = false;
 
     if (!hit) {
       var fewer = rows.filter(function (row) {
@@ -105,6 +106,7 @@ function doGet(e) {
         });
       });
       if (fewer.length === 1) hit = fewer[0];
+      else if (fewer.length > 1) several = true;
     }
 
     if (!hit) {
@@ -114,9 +116,10 @@ function doGet(e) {
         });
       });
       if (more.length === 1) hit = more[0];
+      else if (more.length > 1) several = true;
     }
 
-    if (!hit) return json({ found: false });
+    if (!hit) return json({ found: false, several: several });
 
     var members = rows
       .filter(function (row) { return row.party === hit.party; })
