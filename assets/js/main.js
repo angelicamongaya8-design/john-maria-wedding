@@ -56,7 +56,7 @@
         + '</svg>';
     }
 
-    function one(wide, box){
+    function one(wide, box, slot, slots){
       var d = document.createElement('span');
       d.className = 'drift-leaf';
       var inner = document.createElement('span');
@@ -66,17 +66,19 @@
                                     : leaf(pick(16, 29).toFixed(1));
       d.appendChild(inner);
 
-      d.style.left = pick(1, 92).toFixed(2) + '%';
+      var lane = (slot + pick(0.16, 0.84)) / slots;
+      d.style.left = (2 + lane * 88).toFixed(2) + '%';
       if (!wide) d.style.setProperty('--drop', (box + 160) + 'px');
-      d.style.setProperty('--dx', pick(-46, 46).toFixed(0) + 'px');
+      d.style.setProperty('--dx', pick(-40, 40).toFixed(0) + 'px');
       d.style.setProperty('--r0', pick(-40, 40).toFixed(0) + 'deg');
       d.style.setProperty('--r1', pick(150, 430).toFixed(0) + 'deg');
       d.style.setProperty('--o',  pick(0.34, 0.6).toFixed(2));
-      d.style.setProperty('--sw', pick(14, 34).toFixed(0) + 'px');
+      d.style.setProperty('--sw', pick(8, 19).toFixed(0) + 'px');
 
-      var span = pick(17, 28);
+      var span = pick(19, 30);
       d.style.animationDuration = span.toFixed(1) + 's';
-      d.style.animationDelay = (-Math.random() * span).toFixed(1) + 's';
+      var turn = (slot + pick(0.1, 0.9)) / slots;
+      d.style.animationDelay = (-turn * span).toFixed(1) + 's';
       inner.style.animationDuration = pick(4, 8).toFixed(1) + 's';
       inner.style.animationDelay = (-Math.random() * 6).toFixed(1) + 's';
       return d;
@@ -84,15 +86,15 @@
 
     var narrow = window.innerWidth < 600;
     var frag = document.createDocumentFragment();
-    var many = narrow ? 14 : 20;
-    for (var i = 0; i < many; i++) frag.appendChild(one(true, 0));
+    var many = narrow ? 10 : 15;
+    for (var i = 0; i < many; i++) frag.appendChild(one(true, 0, i, many));
     host.appendChild(frag);
 
     var over = document.getElementById('drift-over');
     if (over){
       var overFrag = document.createDocumentFragment();
-      var overMany = narrow ? 10 : 15;
-      for (var j = 0; j < overMany; j++) overFrag.appendChild(one(true, 0));
+      var overMany = narrow ? 8 : 12;
+      for (var j = 0; j < overMany; j++) overFrag.appendChild(one(true, 0, j, overMany));
       over.appendChild(overFrag);
     }
 
@@ -102,9 +104,9 @@
       box.className = 'drift-in';
       box.setAttribute('aria-hidden', 'true');
       var inFrag = document.createDocumentFragment();
-      var each = narrow ? 14 : 20;
+      var each = narrow ? 10 : 14;
       var tall = Math.round(overs[c].getBoundingClientRect().height) || 600;
-      for (var k = 0; k < each; k++) inFrag.appendChild(one(false, tall));
+      for (var k = 0; k < each; k++) inFrag.appendChild(one(false, tall, k, each));
       box.appendChild(inFrag);
       overs[c].insertBefore(box, overs[c].firstChild);
     }
